@@ -1,6 +1,0 @@
-{
-	"anton_hammerswing": { "File": "sn_antonAirHammer.ogg", "Type": "Sound"},
-	"anton_hammerslam": { "File": "sn_antonHammerSmash.ogg", "Type": "Sound"},
-
-	"happy_hour": { "File": "HappyHour.ogg", "Type": "Music", "Name": "antonblast reference"}
-}

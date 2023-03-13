@@ -7,9 +7,9 @@ function bool isDAGarden()
 // Don't load Sonic's intro for Amy
 function bool isSonicIntro()
 {
-	if (global.xtrachar != 3)
-		return base.isSonicIntro()
-	return false
+	if (global.xtrachar == 3)
+		return false
+	return base.isSonicIntro()
 }
 
 //# address-hook(0x0638a2) end(0x0638d6)

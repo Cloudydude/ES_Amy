@@ -1,0 +1,324 @@
+//# address-hook(0x01a170) end(0x01a198)
+function void fn01a170()
+{
+	if (XtraChar != 3)
+	{
+		base.fn01a170()
+		return
+	}
+	// No flickies
+}
+
+// function void ExtraChar.loadSpecialPalettes(u8 xtrachar, u8 character, u32 targetAddress, u8 paletteVariant)
+// {
+// 	u8 gameMode = global.game_mode & 0x7f
+	
+// 	if (xtrachar == 3 && character == CHARACTER_TAILS && gameMode != 0x4c && gameMode != 0x44 && gameMode != 0x2c && gameMode != 0x30)
+//     {
+// 		System.writeDisplayLine("KIMMY")
+// 		u16[targetAddress + 2 * 4] = 0x000e
+// 		// if (global.game_mode == 0x9c)
+// 		// // 	targetAddress = 0x802280
+// 		// if (Ray_shoe_color == 0)
+// 		// {
+// 		// 	if (Ray_Pal == 6) // Guava red Ray_shoe_color
+// 		// 	{
+// 		// 		u16[targetAddress + 2 * 8] = (paletteVariant != 0) ? 0x060c : 0x034d
+// 		// 		u16[targetAddress + 2 * 9] = (paletteVariant != 0) ? 0x0406 : 0x0526
+// 		// 		u16[targetAddress + 2 * 19] = (paletteVariant != 0) ? 0x0302 : 0x0402 // Mania third red shoe color
+// 		// 	}
+// 		// 	else
+// 		// 	{
+// 		// 		u16[targetAddress + 2 * 8] = (paletteVariant != 0) ? 0x060C : 0x000e
+// 		// 		u16[targetAddress + 2 * 9] = (paletteVariant != 0) ? 0x0406 : 0x0008
+// 		// 		u16[targetAddress + 2 * 19] = (paletteVariant != 0) ? 0x0403 : 0x0004 // Mania third red shoe color
+// 		// 	}
+// 		// }
+
+// 		// if (Rays_Grays == 1 && (Ray_Pal == 1 || Ray_Pal == 2 || Ray_Pal == 6))
+// 		// {
+// 		// 	u16[targetAddress + 2 * 12] = (paletteVariant != 0) ? 0x0eac : 0x0ecc
+// 		// 	u16[targetAddress + 2 * 13] = (paletteVariant != 0) ? 0x0c8a : 0x0caa
+// 		// 	u16[targetAddress + 2 * 14] = (paletteVariant != 0) ? 0x0846 : 0x0866
+// 		// }
+
+// 		// if (Ray_Pal == 3 && Ray_Sprite_type == 0)
+// 		// {
+// 		// 	u16[targetAddress + 2 * 11] = (paletteVariant != 0) ? 0x0314 : 0x0026
+// 		// }
+		
+// 		return
+// 	}
+	
+// 	base.ExtraChar.loadSpecialPalettes(xtrachar, character, targetAddress, paletteVariant)
+// }
+
+// global bool Ray_UnderDaSea
+
+global bool Amy_Super_Pallete
+global bool Amy_Glow
+global bool Amy_Flash
+global bool Amy_EXPAL
+
+function void SuperandHyperPalette_Amy(u32 color1, u32 color2, u32 color3)
+{
+	u8 character = getMainCharacter()
+					
+	bool isHyperEffect = (super.active == 0xff || super.active.tails == 0xff)
+	u16 nextFrame = (super.palettefx.frame + 6) % (isHyperEffect ? 108 : 18)
+	u16 FlashOpacity = 0x100
+	if (Amy_Glow != 0)
+		FlashOpacity = (Amy_Flash == 0) ? 0x100 : 0xc8
+
+	u16 blendFactor = super.palettefx.timer * FlashOpacity / (isHyperEffect ? 0x07 : 0x0f)
+
+	if (nextFrame % 18 == 0)
+		blendFactor = FlashOpacity - blendFactor
+	else if (nextFrame % 18 == 12)
+		blendFactor = 0
+	for (u8 underwater = 0; underwater < (level.water_present ? 2 : 1); ++underwater)
+	{
+		u32 offset = character * 0x40 + (underwater ? 0x300 : 0)
+		u32 source = 0x802180 + offset
+		u32 dest   = 0x802000 + offset
+		u32 dest2  = 0x802300 + offset
+
+		// Load modded Super palette
+		u8 line = 5
+		if (isHyperEffect && Amy_EXPAL)
+		{
+			// Hyper color cycle (if mod supports it)
+			line = 6 + super.palettefx.frame / 18
+			if (!System.hasExternalPaletteData(getExtraCharacterPaletteKey(3), line))
+				line = 5
+		}
+		// u8 line2 = 0
+		// if (Ray_UnderDaSea)
+		// {
+		// 	if (underwater)
+		// 		line += (global.zone == 0 || global.zone == 5) ? 7 : 14
+		// 	line2 = line+1
+		// }
+		zeroMemory(dest, 0x40)
+		u16 numColors = System.loadExternalPaletteData(getExtraCharacterPaletteKey(3), line, 0x800000, 0x20)
+		for (u16 i = 0; i < numColors; ++i)
+		{
+
+			u32 rgba = u32[0x800000 + i * 4]
+			u16[dest + i * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
+			if (super.active.tails == 1 && Amy_Super_Pallete)
+			{
+				u16[dest + 2 * 2] = color1
+				u16[dest + 2 * 3] = color2
+				u16[dest + 2 * 4] = color3
+			}
+		}
+
+		// if (Ray_UnderDaSea)
+		// {
+		// 	u16 numColors2 = System.loadExternalPaletteData(getExtraCharacterPaletteKey(3), line2, 0x800000, 0x20)
+		// 	for (u16 i = 0; i < numColors2; ++i)
+		// 	{
+		// 		u32 rgba = u32[0x800000 + i * 4]
+		// 		u16[dest2 + i * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
+		// 	}
+		// }
+
+		for (u8 k = 0; k < 0x40; k += 2)
+		{
+			if (u16[dest + k] == 0)
+			{
+				// Use original color as fallback
+				u16[dest + k] = u16[source + k]
+			}
+			else
+			{
+				// Apply Ray_Flash effect
+				// u16[dest + k] = blendColorsPacked(u16[dest + k], 0x0eee, blendFactor)
+				u16[dest + k] = blendColorsPacked(u16[dest + k], ((Amy_Glow == 0) ? u16[source + k] : 0x0eee), blendFactor)
+			}
+		}
+	}
+	--super.palettefx.timer
+	if (super.palettefx.timer < 0)
+	{
+		super.palettefx.timer = isHyperEffect ? 0x07 : 0x0f
+		super.palettefx.frame = nextFrame
+	} 
+}
+
+function void UpdatePaletteEffects.SuperForm.moddingVersion(u8 characterVersion)
+{
+	if (XtraChar != 3)
+	{
+		base.UpdatePaletteEffects.SuperForm.moddingVersion(characterVersion)
+		return
+	}
+
+	u32 color1 = 0x08EE
+	u32 color2 = 0x00EE
+	u32 color3 = 0x00AA
+
+	if (AmyPalette == 3) // Mania
+	{
+		color1 = 0x03DE
+		color2 = 0x01CE
+		color3 = 0x00BE
+	}
+	else if (AmyPalette == 5) // Undertale: Bits & Pieces
+	{
+		color1 = 0x05CF
+		color2 = 0x04BE
+		color3 = 0x058E
+	}
+	else if (AmyPalette == 7) // Sonic Drift 2
+	{
+		color1 = 0x0AFF
+		color2 = 0x05FF
+		color3 = 0x00FF
+	}
+
+	if (super.palettefx.state & 0x80)
+	{
+		SuperandHyperPalette_Amy(color1, color2, color3)
+	}
+	else if (super.palettefx.state == 1)
+	{
+		// Update ongoing palette effect
+		u8 character = getMainCharacter()
+		bool isHyperEffect = (super.active == 0xff || super.active.tails == 0xff)
+
+		--super.palettefx.timer
+		if (super.palettefx.timer >= 0)
+			return
+
+		// Fade in effect
+		super.palettefx.frame += 6
+		super.palettefx.timer = 1
+
+		for (u8 underwater = 0; underwater < (level.water_present ? 2 : 1); ++underwater)
+		{
+			u16 blendFactor = clamp((super.palettefx.frame + (1 - super.palettefx.timer) * 6 / 2) * 0x100 / 0x24, 0, 0x100)
+			
+			u32 offset = character * 0x40 + (underwater ? 0x300 : 0)
+			u32 source = 0x802180 + offset
+			u32 dest   = 0x802000 + offset
+			u32 dest2  = 0x802300 + offset
+
+			// Load modded Super palette
+			u8 line = 5
+			if (isHyperEffect && Amy_EXPAL)
+			{
+				// Hyper color cycle (if mod supports it)
+				line = 7
+				if (!System.hasExternalPaletteData(getExtraCharacterPaletteKey(3), line))
+					line = 5
+			}
+			// u8 line2 = 0
+			// if (Ray_UnderDaSea)
+			// {
+			// 	if (underwater)
+			// 		line += (global.zone == 0 || global.zone == 5) ? 7 : 14
+			// 	line2 = line+1
+			// }
+
+			zeroMemory(dest, 0x40)
+			u16 numColors = System.loadExternalPaletteData(getExtraCharacterPaletteKey(3), line, 0x800000, 0x20)
+			for (u16 i = 0; i < numColors; ++i)
+			{
+
+				u32 rgba = u32[0x800000 + i * 4]
+				u16[dest + i * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
+				if (super.active.tails == 1 && Amy_Super_Pallete)
+				{
+					u16[dest + 2 * 2] = color1
+					u16[dest + 2 * 3] = color2
+					u16[dest + 2 * 4] = color3
+				}
+			}
+
+			// if (Ray_UnderDaSea)
+			// {
+			// 	u16 numColors2 = System.loadExternalPaletteData(getExtraCharacterPaletteKey(3), line2, 0x800000, 0x20)
+			// 	for (u16 i = 0; i < numColors2; ++i)
+			// 	{
+			// 		u32 rgba = u32[0x800000 + i * 4]
+			// 		u16[dest2 + i * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
+			// 	}
+			// }
+
+			for (u8 k = 0; k < 0x40; k += 2)
+			{
+				if (u16[dest + k] == 0)
+				{
+					// Use original color as fallback
+					u16[dest + k] = u16[source + k]
+				}
+				else
+				{
+					// Apply flash effect
+					u16[dest + k] = blendColorsPacked(u16[source + k], u16[dest + k], blendFactor)
+				}
+			}
+		}
+
+		if (super.palettefx.frame < 36)
+			return
+				
+		// Fully faded in
+		super.palettefx.state = 0xff
+		u8[0xffffb02e] = 0		// Reset "char.control_flags"
+	}
+	else  // (super.palettefx.state == 2)
+	{
+		// Fade out
+		if (super.palettefx.frame >= 30)
+		{
+			// This is the first frame, set everything so that only the timer is used
+			super.palettefx.frame = 0
+			super.palettefx.frame.tails = 0
+			super.palettefx.timer = 0x11
+		}
+
+		u16 blendFactor = clamp(u16(super.palettefx.timer) * 0x100 / 0x12, 0, 0x100)
+		for (u8 underwater = 0; underwater < (level.water_present ? 2 : 1); ++underwater)
+		{
+			u32 offset = getMainCharacter() * 0x40 + (underwater ? 0x300 : 0)
+			u32 source = 0x802180 + offset
+			u32 dest   = 0x802000 + offset
+
+			for (u8 k = 0; k < 0x40; k += 2)
+			{
+				if (u16[dest + k] == 0)
+				{
+					// Use original color as fallback
+					u16[dest + k] = u16[source + k]
+				}
+				else
+				{
+					// Apply flash effect
+					u16[dest + k] = blendColorsPacked(u16[source + k], u16[dest + k], blendFactor)
+				}
+			}
+		}
+		
+		if (super.palettefx.timer == 0)
+		{
+			// Fully faded out
+			super.palettefx.state = 0
+		}
+		else
+		{
+			--super.palettefx.timer
+		}
+	}
+}
+
+// Prevents Amy from walking in mid-air, while trying to go super, during the MGZ act 2 boss
+function void Character.cancelSuperTransformation()
+{
+	if (A0 == 0xffffb000)
+	{
+		base.Character.cancelSuperTransformation()
+	}
+}

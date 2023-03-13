@@ -1,0 +1,7 @@
+{
+	"dataSel_slot3":  { "File": "dataselect_amy.bmp", "Rect": "0,0,40,40", "Center": "10,40" },
+	"dataSel_savePortrait_slot3":  { "File": "Amy save portraits.png", "Rect": "1,1,80,56", "Center": "40,120" },
+	"dataSel_savePortrait_superslot3":  { "File": "Amy save portraits.png", "Rect": "83,1,80,56", "Center": "40,120" },
+	"Clear_slot3":  { "File": "Amy save portraits.png", "Rect": "165,1,80,56", "Center": "40,120" },
+	"dataSel_lifeContinue_slot3":  { "File": "Amy_dataselect_continue.bmp", "Rect": "28,4,24,40"}
+}

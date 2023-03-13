@@ -1,0 +1,460 @@
+global bool Amy.Elemental.Shields
+global u8 Amy_Shield_Button
+global bool IsAmyUsingShield
+global bool AmyBubbleBounce
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
+function void ExtraChar.pressedJumpInMidAir_char3()
+{
+	if (A0 == 0xffffb000)
+	{
+		// System.writeDisplayLine(stringformat("char.double_jump_state = %x", char.double_jump_state))
+		u8 input_state     = (char.character == CHARACTER_TAILS) ? control.tails.state   : control.player1.state
+		u8 input_pressed   = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
+		
+		if (char.double_jump_state == 0 && Amy.Elemental.Shields && (input_pressed & Amy_Shield_Button && (char.bonus_effect & char.bonus.ANY_SHIELD) && (char.bonus_effect & char.bonus.INVINCIBLE) == 0))
+		{ // Elemental Shields
+			Amy.Shields()
+		}
+		else
+		{
+			if (char.double_jump_state == 0)
+			{
+				HammerSnds()
+				HammerSnds2()
+				char.double_jump_state = 1	// Always set this flag; needed for Hammer Bounce
+			}
+			// char.double_jump_state = 1	// Always set this flag; needed for Hammer Bounce
+		}
+		// System.writeDisplayLine(stringformat("char.double_jump_state = %x", char.double_jump_state))
+		push(true)
+	}
+	else
+		push(false)
+	return
+}
+
+function void HammerSnds2()
+{
+	if AmyPalette == 4
+		Audio.playAudio("anton_hammerswing", AudioContext.CONTEXT_SOUND)
+	else
+		playSound(0x67)
+}
+
+function void HammerSnds()
+{
+	if AmyPalette != 4
+		playSound(0x8c)
+}
+
+function void Amy.Shields()
+{
+	IsAmyUsingShield = true
+
+	u8 sproing = System.getGlobalVariableValueByName("powerspringtimer_p1")
+	
+	if (char.bonus_effect & char.bonus.SHIELD_FIRE)
+	{
+		u8[0xffffcd08] = 1		// That's 0x20 inside the shield object at 0xffffcce8
+
+		sproing = max(sproing , 6)
+		System.setGlobalVariableValueByName("powerspringtimer_p1", sproing)
+		
+		char.double_jump_state = 2
+
+		s16 vx = 0x800
+		if (char.flags & char.flag.FACING_LEFT)
+			vx = -vx
+
+		char.velocity.x = vx
+		char.velocity.y = 0
+		char.groundspeed = vx
+		camera.locktime.player1 = 0x2000
+		ClearPositionBackup()
+		playSound(SFX_FIRESHIELDDASH)
+	}
+	else if (char.bonus_effect & char.bonus.SHIELD_LIGHTNING)
+	{
+		u8[0xffffcd08] = 1
+		char.double_jump_state = 2
+
+		sproing = max(sproing , 0)
+		System.setGlobalVariableValueByName("powerspringtimer_p1", sproing)
+
+		char.velocity.y = -0x580
+		char.jumping = 0
+		playSound(SFX_LIGHTNINGJUMP)
+	}
+	else if (char.bonus_effect & char.bonus.SHIELD_BUBBLE)
+	{
+		u8[0xffffcd08] = 1
+		AmyBubbleBounce = true
+		char.double_jump_state = 2
+
+		sproing = max(sproing , 3)
+		System.setGlobalVariableValueByName("powerspringtimer_p1", sproing)
+
+	#if STANDALONE
+		if (!Game.getSetting(SETTING_BUBBLE_SHIELD_BOUNCE))
+	#endif
+		{
+			char.velocity.x = 0
+		}
+		char.velocity.y = 0x800
+		char.groundspeed = 0
+		playSound(SFX_BUBBLEBOUNCE)
+	}
+	else // Character must have a shield to call this function, so this must be classic shield
+	{
+		// We could put an ability here I guess. It would have to be optional.
+		char.double_jump_state = 1
+		playSound(0x3a)
+	}
+}
+
+function void Character.LandingOnGroundResetState()
+{
+    // if !ExtraChar.isAmy()
+	if (global.xtrachar != 3 || A0 != 0xffffb000)
+    {
+        base.Character.LandingOnGroundResetState()
+        return
+    }
+
+	if (abs(char.double_jump_state) == 1)
+		System.setGlobalVariableValueByName("powerspringtimer_p1", 3)
+
+	char.flags &= ~char.flag.IN_AIR
+	char.flags &= ~char.flag.PUSHING
+	char.flags &= ~char.flag.CONTROL_LOCK
+	char.jumping = 0
+	score.bonus_counter = 0		// No more increasing bonusses after hitting the ground
+	char.rotation.x = 0
+	u8[A0 + 0x2d] = 0
+	u8[A0 + 0x30] = 0
+	char.look_up_down_timer = 0
+
+	// Check for hammer bounce
+	if (char.double_jump_state == 1) && (char.state != char.state.GOT_HURT) && (char.state != char.state.GOT_HURT_PANIC)
+	{
+		bool Lava_Electric_Check = ((u8[A1 + 0x2b] & char.bonus.SHIELD_FIRE) || (u8[A1 + 0x2b] & char.bonus.SHIELD_LIGHTNING) || u8[A1 + 0x34] != 0 || (u8[A1 + 0x2b] & char.bonus.INVINCIBLE) != 0 || super.active)
+		bool Standing = !((((u32[char.object_standing_on + 0xffff0000] == 0x024090) && !(u8[A1 + 0x34] != 0 || (u8[A1 + 0x2b] & char.bonus.INVINCIBLE) != 0 || super.active)) || (u32[char.object_standing_on + 0xffff0000] == 0x022ef4) || (u32[char.object_standing_on + 0xffff0000] == 0x023490) || (u32[char.object_standing_on + 0xffff0000] == 0x0462b6) || (u32[char.object_standing_on + 0xffff0000] == 0x0480d4) || (u32[char.object_standing_on + 0xffff0000] == 0x8b384) || ((u32[char.object_standing_on + 0xffff0000] == 0x01f45e) && !Lava_Electric_Check) || ((u32[char.object_standing_on + 0xffff0000] == 0x059fdc) && !Lava_Electric_Check) || (u32[char.object_standing_on + 0xffff0000] == 0x03cb66)) && (char.flags & char.flag.ON_OBJECT) || (objA1.update_address == 0x01a64a || objA1.update_address == 0x044048 || objA1.update_address == 0x042c80 || objA1.update_address == 0x03cf90 || objA1.update_address == 0x0263dc || objA1.update_address == 0x0917b4 || objA1.update_address == 0x0688f4) )
+
+        char.double_jump_state = 2 // Only one bounce
+
+        s16 forceY
+		s16 forceX
+
+        if (super.active.tails)
+		{
+			// forceX = (char.flags & char.flag.UNDERWATER) ? 0x680 : 0xb00 //
+			forceY = (char.flags & char.flag.UNDERWATER) ? 0x580 : 0x900
+		}
+        else
+		{
+			// forceX = (char.flags & char.flag.UNDERWATER) ? 0x580 : 0xa00 //
+			forceY = (char.flags & char.flag.UNDERWATER) ? 0x480 : 0x800
+		}
+
+		forceX = (char.flags & char.flag.UNDERWATER) ? 0x580 : 0xa00 //
+
+        s16 vx = mainchar.groundhit.velocity.x
+        s16 vy = mainchar.groundhit.velocity.y
+        u8 moveAngle = lookupAngleByVector(vx, vy)
+        u8 groundAngle = char.rotation
+        u8 reflectedAngle = groundAngle * 2 - moveAngle
+        char.velocity.x = (s32(lookupCos(reflectedAngle)) * forceX) >> 8
+        char.velocity.y = (s32(lookupSin(reflectedAngle)) * forceY) >> 8
+
+        char.state = char.state.ROLLING
+        char.flags |= (char.flag.IN_AIR | char.flag.ROLLING)
+        char.flags &= ~char.flag.PUSHING
+        char.jumping = 1
+        char.on_convex_surface = 0
+        char.hitbox_extends.y = 14
+        char.hitbox_extends.x = 7
+
+        s8 dy = char.hitbox_extends.y - char.hitbox.default.y
+        char.position.y.u16 += (global.inv_gravity) ? dy : -dy
+
+        //u8[0xffffcce8 + 0x20] = 2
+
+		if (!competition_mode.active && Standing && !AmyDustControl)
+        	SpawnAmyDustClouds()
+
+		if (Standing && !AmyDustControl)
+		{
+		#if GAMEAPP >= 0x22121500 // Latest update
+			Input.setControllerRumble(-1, 0.5f, 69.0f, 300)
+		#endif
+			camera.hyper_knux_shake = 0x0114
+
+			AmyLandingSnds()
+		}
+
+        if (super.active.tails == 0xff) // Hyper
+        {
+            playSound(0x9b)
+            Character.ClearEnemiesOnScreen()
+			global.whiteflash_timeout = 4
+        }
+	}
+	if (AmyBubbleBounce && !super.active.tails && (char.bonus_effect & char.bonus.SHIELD_BUBBLE) && ((char.bonus_effect & char.bonus.INVINCIBLE) == 0))
+	{
+		System.setGlobalVariableValueByName("powerspringtimer_p1", 3)
+		SonicLandingBubbleBounce()
+		AmyBubbleBounce = false
+		char.double_jump_state = 0
+	}
+	IsAmyUsingShield = false
+	AmyDustControl = 0
+
+	// Fix for the SSZ spike swing
+	if ((u32[char.object_standing_on + 0xffff0000] == 0x0462b6) && (char.flags & char.flag.ON_OBJECT))
+	{
+		char.state = char.state.ROLLING
+		char.flags |= char.flag.ROLLING
+	}	
+}
+
+function void AmyLandingSnds()
+{
+	if AmyPalette == 4
+	{
+		Audio.playAudio("anton_hammerslam", AudioContext.CONTEXT_SOUND)
+	}
+	else
+	{
+		playSound(0x49)
+		playSound(0x8b)
+	}
+}
+
+// Break various walls
+//# address-hook(0x021568) end(0x021690)
+function void fn021568()
+{
+    if !ExtraChar.isAmy()
+    {
+        base.fn021568()
+        return
+    }
+	u16[A0 + 0x30] = u16[0xffffb000 + 0x18]
+	objA0.value32 = u16[0xffffb04a + 0x18]
+
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	if (u8[A0 + 0x2c] & 0x80)
+	{
+		if (level.trigger00 == 0)
+		{
+			DrawOrUnloadObject()
+		}
+		else
+		{
+			UnloadObject()
+		}
+		return
+	}
+
+	D6 = (D6 << 16) + (D6 >> 16)
+	D6.u16 &= 0x03
+	if (D6.u16 == 0)
+	{
+		DrawOrUnloadObject()
+		return
+	}
+
+	A1 = 0xffffb000
+	D1.u16 = u16[A0 + 0x30]
+	if (D6.u16 & 0x01)
+	{
+		bool canBreakWall = false
+		if (super.active || u8[A1 + 0x38] == CHARACTER_KNUCKLES) || (u8[A1 + 0x2f] != 0)
+		{
+			// Super/Hyper forms can break walls, and Knuckles can
+			canBreakWall = true
+		}
+		else
+		{
+			// Does this wall allow for rolling into the wall? Otherwise the fire shield will do
+			if ((objA0.flags2a & object.flag.P1_PUSHING) || (u8[A1 + 0x2b] & char.bonus.SHIELD_FIRE))
+			{
+				canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x0480)
+			}
+		}
+
+		if (canBreakWall)
+		{
+			objA0.flags2a &= ~object.flag.P1_PUSHING
+			fn02165a()
+
+			A1 = 0xffffb04a
+			if ((objA0.flags2a & object.flag.P2_PUSHING) && objA1.state == char.state.ROLLING)
+			{
+				objA0.flags2a &= ~object.flag.P2_PUSHING
+				objA1.velocity.x = objA0.value32
+				u16[A1 + 0x1c] = objA1.velocity.x
+				objA1.flags2a &= ~char.flag.PUSHING
+			}
+
+			DrawOrUnloadObject()
+			return
+		}
+	}
+
+	A1 = 0xffffb04a
+	D1.u16 = objA0.value32
+	if ((objA0.flags2a & object.flag.P2_PUSHING) && objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x0480)
+	{
+		objA0.flags2a &= ~object.flag.P2_PUSHING
+		fn02165a()
+
+	#if STANDALONE
+		if (Game.getSetting(SETTING_FIX_GLITCHES))
+		{
+			// Prevent slope glitch here for player 1
+			if ((u8[0xffffb000 + 0x2a] & char.flag.ON_OBJECT) && u16[0xffffb000 + 0x42] == A0.u16)
+			{
+				u8[0xffffb000 + 0x2a] &= ~char.flag.ON_OBJECT
+				u8[0xffffb000 + 0x2a] |= char.flag.IN_AIR
+			}
+		}
+	#endif
+	}
+#if STANDALONE
+	else if (global.zone == 0x02)
+	{
+		// In MGZ, make all normal breakable walls also breakable by spinning top
+		D6 = (D6 << 16) + (D6 >> 16)
+		fn021758()
+	}
+#endif
+	else
+	{
+		DrawOrUnloadObject()
+	}
+}
+
+//# address-hook(0x01fd08) end(0x01ff1a)
+function void fn01fd08()
+{
+    if !ExtraChar.isAmy()
+    {
+        base.fn01fd08()
+        return
+    }
+
+	u16[A0 + 0x30] = u16[0xffffb000 + 0x18]
+	u16[A0 + 0x36] = u16[0xffffb04a + 0x18]
+
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	D6 = (D6 << 16) + (D6 >> 16)
+	if (D6.u16 & 0x03)
+	{
+		bool canBreakWall = false
+
+		A1 = 0xffffb000
+		D1.u16 = u16[A0 + 0x30]
+		if (D6.u16 & 0x01)
+		{
+			if (u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+			{
+				// Knuckles can break all walls
+				canBreakWall = true
+			}
+			else
+			{
+				if ((objA0.subtype2c & 0x80) == 0)	// Special Knuckles-only wall?
+				{
+					if (super.active) || (u8[A1 + 0x2f] != 0)
+					{
+						// Super form breaks walls even when going slow
+						canBreakWall = true
+					}
+					else if ((objA0.flags2a & object.flag.P1_PUSHING) || (u8[A1 + 0x2b] & char.bonus.SHIELD_FIRE))
+					{
+						// Normal Sonic and Tails need to quickly roll into a wall to break it (this includes the fire shield attack)
+						canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x480)
+					}
+				}
+			}
+
+			if (canBreakWall)
+			{
+				objA0.flags2a &= ~object.flag.P1_PUSHING
+				Rocks.BreakWall()
+
+				if (objA0.flags2a & object.flag.P2_PUSHING)
+				{
+					// Check for second character
+					A1 = 0xffffb04a
+					if (u8[A1 + 0x38] == CHARACTER_KNUCKLES || objA1.state == char.state.ROLLING)
+					{
+						objA1.velocity.x = u16[A0 + 0x36]
+						u16[A1 + 0x1c] = objA1.velocity.x
+						objA0.flags2a &= ~object.flag.P2_PUSHING
+						objA1.flags2a &= ~char.flag.PUSHING
+					}
+				}
+			}
+		}
+
+		if (!canBreakWall)
+		{
+			// Give second character a try
+			A1 = 0xffffb04a
+			D1.u16 = u16[A0 + 0x36]
+
+			if (objA0.flags2a & object.flag.P2_PUSHING)
+			{
+				if (u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+				{
+					// Knuckles can break all walls
+					canBreakWall = true
+				}
+				else
+				{
+					if ((objA0.subtype2c & 0x80) == 0)	// Special Knuckles-only wall?
+					{
+						// Normal Sonic and Tails need to quickly roll into a wall to break it (this includes the fire shield attack)
+						canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x480)
+					}
+				}
+			}
+
+			if (canBreakWall)
+			{
+				objA0.flags2a &= ~object.flag.P2_PUSHING
+				Rocks.BreakWall()
+				return
+			}
+		}
+	}
+
+	if (competition_mode.active == 0)
+	{
+		if (checkForUnloadObjectAtPosition(objA0.countdown_value))
+			return
+	}
+	DrawObject()
+}
+
+//Amy doesn't peelout. Other charachers should be able to though!
+function bool Character.updateSuperPeelout()
+{
+	if (global.xtrachar == 3 && char.character == CHARACTER_TAILS)
+		return false
+
+	return base.Character.updateSuperPeelout()
+}

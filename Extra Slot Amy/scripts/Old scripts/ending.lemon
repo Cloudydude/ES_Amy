@@ -1,0 +1,71 @@
+// Best Ending
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+    if (XtraChar == 3)
+    {
+        if((objA0.update_address == 0x05e18a)   && (outro.ending_type >= 0)  && (global.characters == CHARS_TAILS_ALONE)) 
+        {
+            bool prioFlag = (objA0.sprite_attributes & 0x8000) != 0
+            u64 key = ""  
+            if (objA0.animation.sprite == 0x03)      
+            key = "ending_hyper_amy_jump"
+            if (objA0.animation.sprite == 0x04)      
+            key = stringformat("ending_hyper_amy_%d", (level.framecounter >> 1) % 6)
+
+            if(Renderer.hasCustomSprite(key))
+            {
+        Renderer.drawCustomSprite(key, px, py, 0x20, objA0.render_flags | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
+                return true
+            }
+        }
+    }
+ 
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}
+
+// Good Ending
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+    if (XtraChar == 3)
+    {
+        if ((objA0.update_address == 0x05e18a)   && (outro.ending_type == 0)  && (global.characters == CHARS_TAILS_ALONE)) 
+        {
+            bool prioFlag = (objA0.sprite_attributes & 0x8000) != 0
+            u64 key = ""  
+            if (objA0.animation.sprite == 0x03)      
+            key = "ending_super_amy_jump"
+            if (objA0.animation.sprite == 0x04)      
+            key = stringformat("ending_super_amy_%d", (level.framecounter >> 2) % 8)
+
+            if(Renderer.hasCustomSprite(key))
+            {
+                Renderer.drawCustomSprite(key, px, py, 0x20, objA0.render_flags | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
+                return true
+            }
+        }
+    }
+ 
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}
+
+// Bad Ending
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+    if (XtraChar == 3)
+    {
+        if((objA0.update_address == 0x05e18a)   && (outro.ending_type <= 0)  && (global.characters == CHARS_TAILS_ALONE)) 
+        {
+            bool prioFlag = (objA0.sprite_attributes & 0x8000) != 0
+            u64 key = ""        
+            key = stringformat("ending_amy_0x%02x", objA0.animation.sprite)
+
+            if(Renderer.hasCustomSprite(key))
+            {
+        Renderer.drawCustomSprite(key, px, py, 0x20, objA0.render_flags | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
+                return true
+            }
+        }
+    }
+ 
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}

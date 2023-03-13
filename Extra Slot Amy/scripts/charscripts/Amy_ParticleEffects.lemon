@@ -1,0 +1,412 @@
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+	u8 gameMode = global.game_mode & 0x7f
+	bool prioFlag = (objA0.sprite_attributes & 0x8000) != 0
+	u64 key
+	u64 paletteKey
+	u8 atex
+	u8 flags = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((objA0.sprite_attributes & 0x8000) ? SPRITE_FLAG_PRIO : 0)
+
+	// Dust clouds
+	if (objA0.update_address == 0x2000D8) || (objA0.update_address == 0x2000DA)
+	{
+		py -= 6
+		key = stringformat("dust_0%d", objA0.value26)
+		u32 scale = 0x3000 + abs(objA0.state) * 1500
+		scale = 0x10000
+		Renderer.drawCustomSprite(key, px, py, 0, flags, renderQueue, 0, 0xffffffff, scale)
+		
+		if (objA0.state < 60)
+		{
+			s8 sign = objA0.velocity.x / abs(objA0.velocity.x)
+			Renderer.drawCustomSprite(key, px + 6 * sign, py, 0, flags, renderQueue, 0, 0xffffffff, scale - 0x1000)
+		}
+		return true
+	}
+
+	if (objA0.update_address == 0x2042F0)
+	{
+		py -= 2
+		if (objA0.subtype2c == 0x02) // Heart
+		{
+			key = stringformat("amyheart_0%d", objA0.value26)
+		}
+		else if (objA0.subtype2c == 0x03) // Hammer swing
+		{
+			key = stringformat("amyhammerswing_0%d", objA0.value26)
+		}
+		u32 scale = 0x3000 + abs(objA0.state) * 1500
+		scale = 0x10000
+	
+		Renderer.drawCustomSprite(key, px, py, 0, flags | u8[A0 + 0x2b], renderQueue, 0, 0xffffffff, scale - 0x1000)
+		return true
+	}
+
+	return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}
+
+global s16 dust_speed
+
+function void SpawnAmyDustClouds()
+{
+	u32 A1backup = A1
+	
+	u8 count = 6
+	
+	dust_speed = 0x100
+	
+	while count > 0
+	{
+		--count
+		
+		if (allocDynamicObjectStd())
+		{
+			if global.inv_gravity
+			{
+				u8[A1 + 0x04] = (render_flag.WORLD)
+				objA1.update_address = 0x2000DA
+				//u16[A1 + 0x0a] = 0xa6bc
+				//u32[A1 + 0x0c] = 0x01a99a
+				objA1.position.y = objA0.position.y
+				objA1.position.x = objA0.position.x
+				objA1.state = 0
+				objA1.sprite_attributes = objA0.sprite_attributes
+				
+				objA1.position.y.u16 -= 0xf
+				
+				objA1.velocity.x = dust_speed
+				
+				if char.rotation
+				{
+					objA1.flags2a = 1
+				}
+			}
+			else
+			{
+				u8[A1 + 0x04] = (render_flag.WORLD)
+				objA1.update_address = 0x2000D8
+				//u16[A1 + 0x0a] = 0xa6bc
+				//u32[A1 + 0x0c] = 0x01a99a
+				objA1.position.y = objA0.position.y
+				objA1.position.x = objA0.position.x
+				objA1.state = 0
+				objA1.sprite_attributes = objA0.sprite_attributes
+				
+				objA1.position.y.u16 += 0xf
+				
+				objA1.velocity.x = dust_speed
+
+				if abs(char.rotation) > 0x18
+				{
+					s8[A1 + 0x2f] = abs(char.rotation) / 7
+				}
+
+				if abs(char.rotation) > 0x4
+				{
+					objA1.flags2a = 1
+				}
+			}
+		}
+		if dust_speed < 0
+		{
+			dust_speed = -dust_speed
+			dust_speed += 0x80
+		}
+		else
+		{
+			dust_speed = -dust_speed
+		}
+		
+		if (!allocDynamicObjectStd())
+			return
+	}
+	
+	dust_speed = 0x80
+	
+	A1 = A1backup
+}
+
+//# address-hook(0x2000D8)
+function void Character.UpdateDustClouds()
+{
+	if (objA0.state > 79)
+	{
+		UnloadObject()
+		return
+	}
+	objA0.position.x += objA0.velocity.x
+	UpdateMovementStraightSimple()
+	
+	if objA0.flags2a == 1
+	{
+		u16 backupY = objA0.position.y.u16
+		if !(u16[0xffffb000 + 0x46] & 2)	// What path is Amy on?
+		{
+			D5 = 0x0c
+			checkStaticCollisionVertical(objA0.position.x.u16, objA0.position.y.u16, 0xfffff768, 0x10, 0)
+		}
+		else
+		{
+			D5 = 0x0f
+			checkStaticCollisionVertical(objA0.position.x.u16, objA0.position.y.u16, 0xfffff768, 0x10, 1)
+		}
+		D1.u16 -= 2
+		objA0.position.y.u16 += D1.u16
+		s16 backupDist = D1.s16
+		
+		if !(u16[0xffffb000 + 0x46] & 2)	// What path is Amy on?
+		{
+			D5 = 0x0c
+			checkStaticCollisionVertical(objA0.position.x.u16, objA0.position.y.u16, 0xfffff768, 0x10, 0)
+		}
+		else
+		{
+			D5 = 0x0f
+			checkStaticCollisionVertical(objA0.position.x.u16, objA0.position.y.u16, 0xfffff768, 0x10, 1)
+		}
+		D1.u16 -= 2
+		if !(abs(D1.u16) < 0x6)
+		{
+			objA0.flags2a = 2
+			objA0.position.y.u16 = backupY
+		}
+		else
+		{
+			s8[A0 + 0x2f] = backupDist
+		}
+	}
+	else //if (objA0.flags2a == 2)
+	{
+		s8[A0 + 0x2f] = min(s8[A0 + 0x2f], 0x4)
+		objA0.position.y.u16 += s8[A0 + 0x2f]
+	}
+	
+	objA0.value26 = objA0.state / 20
+	objA0.state += (abs(objA0.velocity.x) / 70)
+	
+	DrawObject()
+}
+
+//# address-hook(0x2000DA)
+function void Character.UpdateDustCloudsInverted()
+{
+	if (objA0.state > 79)
+	{
+		UnloadObject()
+		return
+	}
+	objA0.position.x += objA0.velocity.x
+	UpdateMovementStraightSimple()
+	
+	objA0.value26 = objA0.state / 20
+	objA0.state += abs(objA0.velocity.x) / 70
+	
+	DrawObject()
+}
+
+// Hammer dust triggers mines
+//# address-hook(0x03c972) end(0x03c97e)
+function void fn03c972()
+{
+	if (AmyMinesGoBoom())
+		fn03c984()
+
+	base.fn03c972()
+}
+
+//# address-hook(0x03c9bc) end(0x03c9de)
+function void fn03c9bc()
+{
+	if (AmyMinesGoBoom())
+		u16[A0 + 0x30] = 0
+
+	base.fn03c9bc()
+}
+
+function bool AmyMinesGoBoom()
+{
+	A1 = 0xffffb000
+    s16 count = 0x6d
+    while (count >= 0)
+    {
+
+        // Go to the next object
+        A1 += 0x4a
+        --count
+		if (objA1.update_address == 0x2000D8 || objA1.update_address == 0x2000DA)
+		{
+			// boom = true
+			return true
+		}
+    }
+	return false
+}
+
+// Hammer Swing
+function void ExtraChar.amySpawnHammerSwing()
+{
+    u32 A1backup = A1
+    
+    u8 count = 1
+    
+    s16 Arrow_speed = 0x100
+    
+    while count > 0
+    {
+        --count
+        
+        if (allocDynamicObjectStd())
+        {
+            u8[A1 + 0x04] = (render_flag.WORLD)
+            objA1.update_address = 0x2042F0
+			objA1.subtype2c = 0x03
+            //u16[A1 + 0x0a] = 0xa6bc
+            //u32[A1 + 0x0c] = 0x01a99a
+            objA1.position.y = objA0.position.y
+            objA1.position.x = objA0.position.x
+            objA1.state = 0
+            objA1.sprite_attributes = objA0.sprite_attributes
+            u8[A1 + 0x2a] = char.rotation
+            u8[A1 + 0x2b] = (char.flags & char.flag.FACING_LEFT) ? SPRITE_FLAG_FLIP_X : 0
+            
+            objA1.velocity.x = Arrow_speed
+
+            if abs(char.rotation) > 0x18
+            {
+                s8[A1 + 0x2f] = abs(char.rotation) / 7
+            }
+
+        }
+        if Arrow_speed < 0
+        {
+            Arrow_speed = -Arrow_speed
+            //Arrow_speed += 0x80
+        }
+        else
+        {
+            Arrow_speed = -Arrow_speed
+        }
+        
+        if (!allocDynamicObjectStd())
+            return
+    }
+    
+    Arrow_speed = 0
+    
+    A1 = A1backup
+}
+
+// Kiss(?) Heart
+function void ExtraChar.amySpawnKissHeart()
+{
+    u32 A1backup = A1
+    
+    u8 count = 1
+    
+    s16 Arrow_speed = 0x100
+    
+    while count > 0
+    {
+        --count
+        
+        if (allocDynamicObjectStd())
+        {
+            u8[A1 + 0x04] = (render_flag.WORLD)
+            objA1.update_address = 0x2042F0
+			objA1.subtype2c = 0x02
+            //u16[A1 + 0x0a] = 0xa6bc
+            //u32[A1 + 0x0c] = 0x01a99a
+            objA1.position.y = objA0.position.y
+            objA1.position.x = objA0.position.x
+            objA1.state = 0
+            objA1.sprite_attributes = objA0.sprite_attributes
+            u8[A1 + 0x2a] = char.rotation
+            u8[A1 + 0x2b] = (char.flags & char.flag.FACING_LEFT) ? SPRITE_FLAG_FLIP_X : 0
+            
+            objA1.velocity.x = Arrow_speed
+
+            if abs(char.rotation) > 0x18
+            {
+                s8[A1 + 0x2f] = abs(char.rotation) / 7
+            }
+
+			// random number
+			GetRandomNumber()
+			D0.u16 &= 0x200
+			objA1.velocity.x = D0.u16
+
+			// random direction
+			GetRandomNumber()
+			D0.u16 &= 0x01
+			if (D0.u16 == 0x01)
+				objA1.velocity.x = -objA1.velocity.x
+
+			objA1.velocity.y = -0x200
+
+        }
+        if Arrow_speed < 0
+        {
+            Arrow_speed = -Arrow_speed
+            //Arrow_speed += 0x80
+        }
+        else
+        {
+            Arrow_speed = -Arrow_speed
+        }
+        
+        if (!allocDynamicObjectStd())
+            return
+    }
+    
+    Arrow_speed = 0
+    
+    A1 = A1backup
+}
+
+//# address-hook(0x2042F0)
+function void ExtraChar.AmyObjects()
+{
+	if (objA0.subtype2c == 0x01) // Balloon string
+	{
+		UpdateMovementStraightSimple()
+		MoveWithGravity20()
+		
+		DrawObject()
+		if !(objA0.render_flags & render_flag.VISIBLE)
+			UnloadObject()
+	}
+	else if (objA0.subtype2c == 0x02) // Hearts
+	{
+		if (objA0.state > 29)
+		{
+			UnloadObject()
+			return
+		}
+		
+		objA0.value26 = objA0.state / 10 // number of frames
+		objA0.state += 1
+		
+		objA0.position.x.u16 -= u16[0xffffeebc] // needed for level wrap
+		
+		DrawObject()
+		UpdateMovementStraightSimple()
+	}
+	else if (objA0.subtype2c == 0x03) // Hammer swing
+	{
+		if (objA0.state > 39)
+		{
+			UnloadObject()
+			return
+		}
+
+		objA0.value26 = objA0.state / 10 // number of frames
+		objA0.state += 2
+		
+		DrawObject()
+	}
+	else
+	{
+		base.ExtraChar.AmyObjects()
+		return
+	}
+}

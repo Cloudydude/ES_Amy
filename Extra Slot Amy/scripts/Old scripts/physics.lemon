@@ -1,0 +1,725 @@
+//# address-hook(0x0148ac)
+function void UpdateTailsFlight_innerB()
+{
+	if (char.character == CHARACTER_TAILS && XtraChar == 3)
+	{
+		if (char.flags & char.flag.UNDERWATER)
+		{
+			// Swimming
+			if (tails.flight_countdown == 0)
+			{
+				char.state = char.state.TAILS_FLYTIRED
+			}
+			else if (tails.carrying)
+			{
+				char.state = char.state.TAILS_CARRYDOWN
+			}
+			else
+			{
+				char.state = (char.velocity.y < 0) ? char.state.TAILS_FLYUP : char.state.TAILS_FLYDOWN
+			}
+		}
+		else
+		{
+			// Flying
+			if (competition_mode.active)
+			{
+				char.state = char.state.TAILS_FLYDOWN
+			}
+			else
+			{
+				if (tails.flight_countdown == 0)
+				{
+					char.state = char.state.TAILS_FLYTIRED
+				}
+				else if (tails.carrying)
+				{
+					char.state = (char.velocity.y < 0) ? char.state.TAILS_CARRYUP : char.state.TAILS_CARRYDOWN
+				}
+				else
+				{
+					char.state = (char.velocity.y < 0) ? char.state.TAILS_FLYUP : char.state.TAILS_FLYDOWN
+				}
+			}
+		}
+	}
+	else
+	{
+		base.UpdateTailsFlight_innerB()
+	}
+}
+
+//# translated(0x0117da) end(0x0118ba)
+//# translated(0x015002) end(0x0150d8)
+//# translated(0x017710) end(0x0177e8)
+function bool Character.CheckStartJump()
+{
+	if (char.character == CHARACTER_TAILS && XtraChar == 3)
+	{
+		u8 input_pressed = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
+		if ((input_pressed & CONTROL_ABC) == 0) || ((input_pressed & CONTROL_B)) || (HammerSwingTimer != 0) || ((control.player1.state & CONTROL_UP))
+			return false
+
+		D0 = char.rotation
+		if (global.inv_gravity)
+		{
+			D0.s8 = -D0.s8
+		}
+		else
+		{
+			D0.s8 += 0x80
+		}
+
+		pushA456()
+		fn00f72e()
+		popA456()
+
+		if (D1.s16 < 6)
+			return false
+
+		// Get jump acceleration depending on character
+		u16 acceleration
+		if (char.character != CHARACTER_KNUCKLES || competition_mode.active)
+		{
+			if (char.flags & char.flag.UNDERWATER)
+			{
+				acceleration = 0x380
+			}
+			else if (super.active.tails)
+			{
+				acceleration = 0x800
+			}
+			else
+			{
+				acceleration = 0x680
+			}
+		}
+		else
+		{
+			if (char.flags & char.flag.UNDERWATER)
+			{
+				acceleration = 0x300
+			}
+			else
+			{
+				acceleration = 0x600
+			}
+		}
+
+		u8 angle = char.rotation - 0x40
+		s32 accel_x = (s32(lookupCos(angle)) * acceleration) >> 8
+		s32 accel_y = (s32(lookupSin(angle)) * acceleration) >> 8
+
+		char.velocity.x += accel_x
+		char.velocity.y += accel_y
+
+		char.flags |= char.flag.IN_AIR
+		char.flags &= ~char.flag.PUSHING
+
+		char.jumping = 1
+		char.on_convex_surface = 0
+
+		playSound(SFX_JUMP)
+
+		// Start roll jump
+		if (char.flags & char.flag.ROLLING)
+		{
+		#if STANDALONE
+			if (!Game.getSetting(SETTING_NO_CONTROL_LOCK))
+		#endif
+			{
+				char.hitbox_extends.x = char.hitbox.default.x
+				char.hitbox_extends.y = char.hitbox.default.y
+				char.flags |= char.flag.CONTROL_LOCK
+			}
+		}
+		else
+		{
+			char.hitbox_extends.x = 7
+			char.hitbox_extends.y = 14
+			char.flags |= char.flag.ROLLING
+			char.state = char.state.ROLLING
+
+			s8 dy = s8(char.hitbox_extends.y) - s8(char.hitbox.default.y)
+			char.position.y.u16 += global.inv_gravity ? dy : -dy
+
+		#if STANDALONE
+			// Glitch fix for Knuckles being unable to jump off underwater objects
+			//  -> Move him up a single pixel up so he won't stick to objects
+			// TODO: Does not work for the HCZ snake platforms
+			if (acceleration <= 0x300 && (char.flags & char.flag.ON_OBJECT))
+			{
+				--char.position.y.u16
+			}
+		#endif
+		}
+		return true
+	}
+	else
+	{
+		return base.Character.CheckStartJump()
+	}
+}
+
+function void setSpeedCapProperties(u32 address, bool isSuperActive)
+{
+	if (char.character == CHARACTER_TAILS && XtraChar == 3)
+	{
+		// Set new max speed cap etc.:
+		//  - u16[address]     = maximum speed			-> e.g. global.move.speedcap
+		//  - u16[address + 2] = maximum acceleration	-> e.g. global.move.acceleration
+		//  - u16[address + 4] = maximum deceleration	-> e.g. global.move.deceleration
+
+		if (char.flags & char.flag.UNDERWATER)
+		{
+			// In water
+		#if STANDALONE
+			if (u8[A0 + 0x2b] & char.bonus.SPEED_UP)
+			{
+				u16[address] = max(u16[address], 0x600)
+				u16[address + 2] = max(u16[address + 2], 0x0c)
+				u16[address + 4] = max(u16[address + 4], 0x40)
+			}
+			else
+		#endif
+			if (super.active.tails)
+			{
+				{
+					u16[address] = 0x500
+					u16[address + 2] = 0x18
+					u16[address + 4] = 0x80
+				}
+			}
+			else
+			{
+				u16[address] = 0x300
+				u16[address + 2] = 0x06
+				u16[address + 4] = 0x40
+			}
+		}
+		else
+		{
+			// Out of water
+		#if STANDALONE
+			if (u8[A0 + 0x2b] & char.bonus.SPEED_UP)
+			{
+				u16[address] = max(u16[address], 0xc00)
+				u16[address + 2] = max(u16[address + 2], 0x18)
+				u16[address + 4] = max(u16[address + 4], 0x80)
+			}
+			else
+		#endif
+			if (super.active.tails)
+			{
+					u16[address] = 0xa00
+					u16[address + 2] = 0x30
+					u16[address + 4] = 0x100
+				#if STANDALONE
+					// Use an acceleration value that makes Super Sonic a bit more controllable
+					u16[address + 2] = 0x20
+				#endif
+			}
+			else
+			{
+				u16[address] = 0x600
+				u16[address + 2] = 0x0c
+				u16[address + 4] = 0x80
+			}
+		}
+	}
+	else
+	{
+		base.setSpeedCapProperties(address, isSuperActive)
+	}
+}
+
+//# address-hook(0x00ffd4) end(0x010214)
+function void Character.OnCollisionWithDynamicObject()
+{
+	if (char.character == CHARACTER_TAILS && XtraChar == 3)
+	{
+		// Example values for u8[A1 + 0x28]:
+		//  - 0x06, 0x0b, 0x17, 0x1a = Different types of enemies
+		//  - 0x0f		 = Boss enemy
+		//  - 0x18		 = Extended arm of DEZ Chainspike
+		//  - 0x23		 = AIZ Bloominator
+		//  - 0x46		 = Monitor
+		//  - 0x47		 = Dynamic ring
+		//  - 0x87		 = Extended arm of SOZ Skorp
+		//  - 0x8b, 0x9c = Flames, damaging parts of enemies
+		//  - 0x8f		 = Wrecking ball
+		//  - 0x98, 0x9b = Projectile
+		//  - 0xd8		 = Thrown mushroom, stars over starpost
+
+		D1.u8 = u8[A1 + 0x28] & 0xc0
+		if (D1.u8 == 0)
+		{
+			// Collision is an enemy, i.e. is harmful, but can be attacked
+			bool attacking = false
+			if (char.bonus_effect & char.bonus.INVINCIBLE)
+			{
+				attacking = true
+			}
+			else if (char.state == char.state.ROLLING || char.state == char.state.SPINDASH)
+			{
+				attacking = true
+			}
+			else if (char.state == char.state.LIFTED) && (char.character == CHARACTER_TAILS) || (HammerSwingTimer != 0) && (char.character == CHARACTER_TAILS) || (HammerJumpTimer != 0) && (char.character == CHARACTER_TAILS)
+			{
+				attacking = true
+			}
+		#if STANDALONE
+			else if (Game.getSetting(SETTING_DROPDASH) && char.character == CHARACTER_SONIC && char.state == char.state.SONIC_DROPDASH)
+			{
+				attacking = true
+			}
+		#endif
+
+			if (!attacking)
+			{
+				bool isThreat = false
+				if (char.character == CHARACTER_KNUCKLES)
+				{
+					isThreat = (char.double_jump_state != 1 && char.double_jump_state != 3)
+				}
+				else if (char.character == CHARACTER_SONIC || char.double_jump_state == 0 || (char.flags & char.flag.UNDERWATER))
+				{
+					isThreat = true
+				}
+				else
+				{
+					s16 dx = char.position.x.u16 - objA1.position.x.u16
+					s16 dy = char.position.y.u16 - objA1.position.y.u16
+					D0.u8 = lookupAngleByVector(dx, dy) - 0x20
+					isThreat = (D0.u8 >= 0x40)
+				}
+
+				if (isThreat)
+				{
+					Character.OnThreatCollision()
+					return
+				}
+			}
+
+			if (u8[A1 + 0x29] != 0)
+			{
+				char.velocity.x = -char.velocity.x
+				char.velocity.y = -char.velocity.y
+				char.groundspeed = -char.groundspeed
+				u8[A1 + 0x1c] = A0.u8
+				u8[A1 + 0x25] = u8[A1 + 0x28]
+				u8[A1 + 0x28] = 0
+				--u8[A1 + 0x29]
+				if (u8[A1 + 0x29] == 0)
+				{
+					u8[A1 + 0x2a] |= 0x80
+				}
+
+				if (char.character == CHARACTER_KNUCKLES)
+				{
+					if (char.double_jump_state == 1)
+					{
+						char.double_jump_state = 2
+						char.state = char.state.KNUX_FALLING
+
+						if (char.velocity.x >= 0)
+							char.flags |= char.flag.FACING_LEFT
+						else
+							char.flags &= ~char.flag.FACING_LEFT
+
+						char.hitbox_extends.x = char.hitbox.default.x
+						char.hitbox_extends.y = char.hitbox.default.y
+					}
+				}
+			}
+			else
+			{
+				if (u8[A1 + 0x2a] & 0x04)
+				{
+					A2 = 0xffff0000 + u16[A1 + 0x3c]
+					u8[A2] &= ~(1 << u8[A1 + 0x3b])
+				}
+
+				u8[A1 + 0x2a] |= 0x80
+
+				// Grant bonus points
+				Enemy.addScore(A1, 0x010216)
+
+				objA1.update_address = 0x01e5e0
+				u8[A1 + 0x05] = 0
+				if (char.velocity.y < 0)
+				{
+					char.velocity.y += 0x100
+				}
+				else if (char.position.y.u16 >= objA1.position.y.u16)
+				{
+					char.velocity.y -= 0x100
+				}
+				else
+				{
+					char.velocity.y = -char.velocity.y
+				}
+			}
+		}
+		else if (D1.u8 == 0x40)
+		{
+			D0.u8 = u8[A1 + 0x28] & 0x3f
+			if (D0.u8 != 0x06)
+			{
+				// Collect ring, but only after 30 invulnerability frames
+				//  -> Remember that the "char.invuln.countdown" timer starts at 120
+				u8 timer = competition_mode.active ? char.invuln.countdown : u8[0xffffb034]
+				if (timer < 90)
+				{
+					u8[A1 + 0x05] = 0x04
+				}
+			}
+			else
+			{
+				// This part seems to be for monitors specifically
+				s16 vy = (global.inv_gravity) ? -char.velocity.y : char.velocity.y
+				bool movingUp = (objA1.render_flags & render_flag.FLIP_Y) ? (vy > 0) : (vy < 0)
+				if (movingUp)
+				{
+					if (u8[A1 + 0x2a] & char.flag.IN_AIR)
+					{
+						if ((objA1.render_flags & render_flag.FLIP_Y) == 0)
+						{
+							if (char.position.y.u16 - 0x10 < objA1.position.y.u16)
+								return
+						}
+						else
+						{
+							if (char.position.y.u16 + 0x10 >= objA1.position.y.u16)
+								return
+						}
+
+						char.velocity.y = -char.velocity.y
+						objA1.velocity.y = -0x180
+						if (u8[A1 + 0x3c] == 0)
+							u8[A1 + 0x3c] = 4
+
+						return
+					}
+					else
+					{
+					#if STANDALONE
+						if (u8[A1 + 0x2a] & char.flag.PUSHING)
+						{
+							// In S3AIR, do not allow S&K's monitor opening from the side
+							//  -> This is done to be more consistent with other Sonic games, incl. Sonic 1, 2, CD, Mania and even Sonic 3 alone
+							return
+						}
+						// TODO: Unfinished code here -- it works, but the falling monitor can crush the player, and is this really what we want?
+					/*
+						else
+						{
+							// Hit monitor from below, make it fall
+							u8[A1 + 0x3c] = 1
+
+							char.velocity.y = -char.velocity.y
+							objA1.velocity.y = -0x180
+							if (u8[A1 + 0x3c] == 0)
+								u8[A1 + 0x3c] = 4
+							return
+						}
+					*/
+					#endif
+					}
+				}
+
+				if (A0 != 0xffffb000 && competition_mode.active == 0)
+				{
+					// Sorry player 2, you can't open monitors in normal game
+					return
+				}
+
+				bool canOpenMonitor = false
+				if (char.state == char.state.ROLLING) || (HammerSwingTimer != 0) || (HammerSpinTimer != 0)
+				{
+					canOpenMonitor = true
+				}
+			#if STANDALONE
+				else if (Game.getSetting(SETTING_DROPDASH) && char.character == CHARACTER_SONIC && char.state == char.state.SONIC_DROPDASH)
+				{
+					canOpenMonitor = true
+				}
+			#endif
+				else if (char.character == CHARACTER_KNUCKLES)
+				{
+					canOpenMonitor = (char.double_jump_state == 1 || char.double_jump_state == 3)
+				}
+
+				if (canOpenMonitor)
+				{
+					// Bounce off
+					char.velocity.y = -char.velocity.y
+					u8[A1 + 0x05] = 4
+					u16[A1 + 0x42] = A0.u16
+				}
+			}
+		}
+		else if (D1.u8 == 0x80)
+		{
+			// Harmful object
+			Character.OnThreatCollision()
+		}
+		else  // D1.u8 == 0xc0
+		{
+			// Other interactable object
+			fn0103ba()
+		}
+	}
+	else
+	{
+		base.Character.OnCollisionWithDynamicObject()
+	}
+}
+
+//# address-hook(0x021568) end(0x021690)
+function void fn021568()
+{
+	if (XtraChar != 3)
+	{
+		base.fn021568()
+		return
+	}
+	u16[A0 + 0x30] = u16[0xffffb018]
+	objA0.value32 = u16[0xffffb062]
+
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	if (u8[A0 + 0x2c] & 0x80)
+	{
+		if (level.trigger00 == 0)
+		{
+			DrawOrUnloadObject()
+		}
+		else
+		{
+			UnloadObject()
+		}
+		return
+	}
+
+	D6 = (D6 << 16) + (D6 >> 16)
+	D6.u16 &= 0x03
+	if (D6.u16 == 0)
+	{
+		DrawOrUnloadObject()
+		return
+	}
+
+	A1 = 0xffffb000
+	D1.u16 = u16[A0 + 0x30]
+	if (D6.u16 & 0x01)
+	{
+		bool canBreakWall = false
+		if (super.active.tails || super.active || u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+		{
+			// Super/Hyper forms can break walls, and Knuckles can
+			canBreakWall = true
+		}
+		else
+		{
+			// Does this wall allow for rolling into the wall? Otherwise the fire shield will do
+			if ((objA0.flags2a & 0x20) || (u8[A1 + 0x2b] & char.bonus.SHIELD_FIRE))
+			{
+				canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x0480)
+			}
+		}
+
+		if (canBreakWall)
+		{
+			objA0.flags2a &= ~0x20
+			fn02165a()
+
+			A1 = 0xffffb04a
+			if ((objA0.flags2a & 0x40) && objA1.state == char.state.ROLLING)
+			{
+				objA0.flags2a &= ~0x40
+				objA1.velocity.x = objA0.value32
+				u16[A1 + 0x1c] = objA1.velocity.x
+				objA1.flags2a &= ~char.flag.PUSHING
+			}
+
+			DrawOrUnloadObject()
+			return
+		}
+	}
+
+	A1 = 0xffffb04a
+	D1.u16 = objA0.value32
+	if ((objA0.flags2a & 0x40) && objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x0480)
+	{
+		objA0.flags2a &= ~0x40
+		fn02165a()
+	}
+#if STANDALONE
+	else if (global.zone == 0x02)
+	{
+		// In MGZ, make all normal breakable walls also breakable by spinning top
+		D6 = (D6 << 16) + (D6 >> 16)
+		fn021758()
+	}
+#endif
+	else
+	{
+		DrawOrUnloadObject()
+	}
+}
+
+//# address-hook(0x01fd08) end(0x01ff1a)
+function void fn01fd08()
+{
+	if (XtraChar != 3)
+	{
+		base.fn01fd08()
+		return
+	}
+	u16[A0 + 0x30] = u16[0xffffb018]
+	u16[A0 + 0x36] = u16[0xffffb062]
+
+	D1 = objA0.box_size.x + 11
+	D2 = objA0.box_size.y
+	D3.u16 = D2.u16 + 1
+	D4.u16 = objA0.position.x.u16
+	fn01dc56()
+
+	D6 = (D6 << 16) + (D6 >> 16)
+	if (D6.u16 & 0x03)
+	{
+		bool canBreakWall = false
+
+		A1 = 0xffffb000
+		D1.u16 = u16[A0 + 0x30]
+		if (D6.u16 & 0x01)
+		{
+			if (u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+			{
+				// Knuckles can break all walls
+				canBreakWall = true
+			}
+			else
+			{
+				if ((objA0.subtype2c & 0x80) == 0)	// Special Knuckles-only wall?
+				{
+					if (super.active.tails || super.active.tails)
+					{
+						// Super form breaks walls even when going slow
+						canBreakWall = true
+					}
+					else if ((objA0.flags2a & 0x20) || (u8[A1 + 0x2b] & char.bonus.SHIELD_FIRE))
+					{
+						// Normal Sonic and Tails need to quickly roll into a wall to break it (this includes the fire shield attack)
+						canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x480)
+					}
+				}
+			}
+
+			if (canBreakWall)
+			{
+				objA0.flags2a &= ~0x20
+				Rocks.BreakWall()
+
+				if (objA0.flags2a & 0x40)
+				{
+					// Check for second character
+					A1 = 0xffffb04a
+					if (u8[A1 + 0x38] == CHARACTER_KNUCKLES || objA1.state == char.state.ROLLING)
+					{
+						objA1.velocity.x = u16[A0 + 0x36]
+						u16[A1 + 0x1c] = objA1.velocity.x
+						objA0.flags2a &= ~0x40
+						objA1.flags2a &= ~char.flag.PUSHING
+					}
+				}
+			}
+		}
+
+		if (!canBreakWall)
+		{
+			// Give second character a try
+			A1 = 0xffffb04a
+			D1.u16 = u16[A0 + 0x36]
+
+			if (objA0.flags2a & 0x40)
+			{
+				if (u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+				{
+					// Knuckles can break all walls
+					canBreakWall = true
+				}
+				else
+				{
+					if ((objA0.subtype2c & 0x80) == 0)	// Special Knuckles-only wall?
+					{
+						// Normal Sonic and Tails need to quickly roll into a wall to break it (this includes the fire shield attack)
+						canBreakWall = (objA1.state == char.state.ROLLING && abs(D1.s16) >= 0x480)
+					}
+				}
+			}
+
+			if (canBreakWall)
+			{
+				objA0.flags2a &= ~0x40
+				Rocks.BreakWall()
+				return
+			}
+		}
+	}
+
+	if (competition_mode.active == 0)
+	{
+		if (checkForUnloadObjectAtPosition(objA0.countdown_value))
+			return
+	}
+	DrawObject()
+}
+
+//# address-hook(0x01d696) end(0x01d6be)
+function void MonitorIntact.CheckBlocking()
+{
+	if (char.character == CHARACTER_TAILS && XtraChar == 3)
+	{
+		if ((objA0.flags2a >> D6.u8) & 1)
+		{
+			fn01d6dc()
+		}
+		else
+		{
+			// Note that "Character.OnCollisionWithDynamicObject" does the same checks again
+
+			bool canOpenMonitor = false
+			if (objA1.state == char.state.ROLLING) || (HammerSwingTimer != 0) || (HammerSpinTimer != 0)
+			{
+				canOpenMonitor = true
+			}
+		#if STANDALONE
+			else if (u8[A1 + 0x38] == CHARACTER_SONIC && objA1.state == char.state.SONIC_DROPDASH)
+			{
+				canOpenMonitor = true
+			}
+		#endif
+			else if (u8[A1 + 0x38] == CHARACTER_KNUCKLES)
+			{
+				// Check if Knuckles glides into the monitor
+				canOpenMonitor = (u8[A1 + 0x2f] == 1 || u8[A1 + 0x2f] == 3)
+			}
+
+			if (!canOpenMonitor)
+			{
+				// Block character movement
+				fn01df90()
+			}
+		}
+	}
+	else
+	{
+		base.MonitorIntact.CheckBlocking()
+	}
+}

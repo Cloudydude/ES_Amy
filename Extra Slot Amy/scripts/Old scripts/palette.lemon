@@ -1,0 +1,292 @@
+function u64 getCharacterPaletteKey(u8 character)
+{
+	if (character == CHARACTER_TAILS && XtraChar == 3)
+	{
+		if (AmySuperColour == 0)
+			return (AmyPalette == 0) ? "character_palette_amy_1" : (AmyPalette == 1) ? "character_palette_amy_2" : "character_palette_amy_3"
+		else if (AmySuperColour == 1)
+			return (AmyPalette == 0) ? "character_palette_amy_4" : (AmyPalette == 1) ? "character_palette_amy_5" : "character_palette_amy_6"
+    }
+    return base.getCharacterPaletteKey(character)
+}
+
+//# address-hook(0x0081c6) end(0x00858e)
+function void SpecialStage()
+{
+	//let's load this only for Amy
+	if (XtraChar != 3)
+	{
+		base.SpecialStage()
+		return
+	}
+
+#if STANDALONE
+	playMusic(MUSIC_CTRL_FADEOUT)
+#else
+	playMusic(MUSIC_CTRL_STOP)
+#endif
+
+	kosinski.queue_size = 0
+	zeroMemory(0xffffff10, 0x6c)
+
+	ClearPatternLoadingQueue()
+	FadeScreenToWhiteBlocking()
+
+#if STANDALONE
+	// Add a small artificial delay here
+	for (u8 i = 0; i < 12; ++i)
+		yieldInWhiteScreen()
+#endif
+
+	set_status_register(0x2700)
+
+	VDP.Config.enableHInt(false)
+	VDP.Config.setNameTableBasePlaneA(0xc000)
+	VDP.Config.setNameTableBasePlaneB(0xe000)
+	VDP.Config.setPlayfieldSizeInPixels(512, 256)
+	VDP.Config.setupWindowPlane(false, 0)	// Disable window plane
+	VDP.Config.setVerticalScrolling(false, 0)
+	VDP.Config.setBackdropColor(0x20)
+	VDP.Config.setRenderingModeConfiguration(false)
+	water.fullscreen = 0
+
+	fn0011ca()
+
+	zeroMemory(0xffffac00, 0x400)
+	zeroMemory(0xffffb000, 0x2000)
+	zeroMemory(0xfffffe6e, 0x4c)
+	zeroMemory(0xffffe400, 0x100)
+
+	u32[0xfffffe66] = 0
+	u32[0xfffffe6a] = 0
+
+	fn01aa6e()
+
+	u16[0xfffffb00] = 0
+	u32[0xfffffbfc] = 0xfffffb00
+
+	// Load special stage palette
+	//  -> Character colors is the 8 colors from 0xfffffc90 (for Sonic/Knuckles) and 0xfffffcb0 (for Tails)
+	copyMemory(0xfffffc80, 0x00896e, 0x100)
+	//if (global.characters == CHARS_KNUCKLES_ALONE)
+	//{
+	//	copyMemory(0xfffffc90, 0x0089ee, 0x10)
+	//}
+
+#if STANDALONE
+	u64 paletteKey = "bluesphere_palette_slot3"
+
+	u16 numColors = System.loadExternalPaletteData(paletteKey, 0, 0x800000, 0x20)
+	if (numColors > 0)
+	{
+		u32 dest = 0x802180 + getMainCharacter() * 0x40
+		for (u16 i = 0; i < numColors; ++i)
+		{
+			u16[dest + i * 2] = packColor(u32[0x800000 + i * 4])
+		}
+	}
+#endif
+
+	Nemesis.loadDataToVRAM(0x0b07b8, 0x0000)
+
+	fn0085b0()
+
+	Enigma.decompress(0x0aef54, 0xffff5500, 0x0000)
+	copyRectToVRAM(0xffff5500, 0xc000, 0x28, 0x1c)
+
+	Nemesis.loadDataToVRAM(0x0ad904, 0xd000)
+	Nemesis.loadDataToVRAM(0x0adf60, 0xb4e0)
+	Nemesis.loadDataToVRAM(0x0aeed0, 0xb360)
+	Nemesis.loadDataToVRAM(0x0ad472, 0xabe0)
+	Nemesis.loadDataToVRAM(0x0ad5f4, 0xdf00)
+	Nemesis.loadDataToVRAM(0x0ad650, 0xf020)
+
+	A0 = 0x0ad650
+	A4 = 0xffffe020
+	fn0015cc()
+
+	Nemesis.loadDataToVRAM(0x0ad7bc, 0xb120)
+	Nemesis.loadDataToVRAM(0x0ad430, 0xf400)
+
+	copyRectToVRAM(0x008d2c, 0xc084, 0x08, 0x03)
+	copyRectToVRAM(0x008d2c, 0xc0bc, 0x08, 0x03)
+
+	Enigma.decompress(0x0aedb0, 0xffff0000, 0x459b)
+	copyRectToVRAM(0xffff0000, 0xe000, 0x40, 0x20)
+
+	Kosinski.decompress(0x0b2e36, 0xffff0000)
+
+	fn009ea0()
+	fn00a0e6()
+
+	global.level_started = 0
+	bluespheres.bs_hud_dirty = 0xff
+	bluespheres.rings_flags = 0x80
+	bluespheres.current_gamespeed = 0x1000
+	bluespheres.speedup_countdown = BlueSpheres.useGeneratedStages() ? 2700 : 1800
+	camera.foreground.x.u16 = 0
+	camera.foreground.y.u16 = 0
+	level.height.bitmask = 0xffff
+
+	u32[0xffffb000] = 0x008faa
+	if (getNumPlayers() >= 2)
+	{
+		u32[0xffffb04a] = 0x009212
+	}
+	u32[0xffffb094] = 0x008df8
+	u32[0xffffb0de] = 0x008e40
+	UpdateGameObjects()
+
+	fn009d9e()
+	fn009dde()
+	RenderSprites()
+
+	BlueSpheres.RenderSpheres()
+	fn009d5e()
+
+	u8[0xffffe433] = 0x01
+	global.frame_state = 0x1c
+
+	waitForNextFrame()
+
+	u8[0xffffe433] = 0
+	VDP.Config.setRenderingModeConfiguration(true)		// Enable shadow/highlight palette mode
+
+	global.demo_countdown = 1800
+	fn0075d2()
+
+#if STANDALONE
+	if (BlueSpheres.useGeneratedStages())
+	{
+		playMusic(0xf8)		// Different music track, one that speeds up the music only every 45 (instead of 30) seconds
+	}
+	else
+#endif
+	{
+		playMusic(0x1c)
+	}
+
+	VDP.Config.setActiveDisplay(true)
+	BlueSpheres.FadeIn()
+
+	while (true)
+	{
+		UpdateGamePause()
+		global.frame_state = 0x1c
+		Kosinski.ProcessDecompressionQueue()
+
+		waitForNextFrame()
+	@EntryPoint:
+
+		++level.framecounter
+		UpdateRollingDemo()
+		UpdateGameObjects()
+
+		fn009d9e()
+		fn009dde()
+		RenderSprites()
+
+		BlueSpheres.RenderSpheres()
+		BlueSpheres.RenderCharacterSprites()
+		fn009d5e()
+		fn009b62()
+
+	#if GAMEAPP
+		BlueSpheres.renderCustomGround()
+		BlueSpheres.renderCustomCharacterShadows()
+	#else
+	#if STANDALONE
+		Renderer.setViewport(getScreenExtend(), 0, 320, 224, 0x0000)
+	#endif
+	#endif
+
+		LoadRequiredSpritePatterns()
+		Kosinski.ProcessModules()
+
+		if (global.rolling_demo && global.demo_countdown == 0)
+			break
+
+		if (global.game_mode != 0x34)	// Blue Spheres game mode
+			break
+
+	#if STANDALONE
+		// Only needed to support restart from the Pause Menu
+		//  -> Not used at the moment, so nevermind
+		if (level.restart)
+		{
+			global.game_mode = 0x0c
+			return
+		}
+	#endif
+	}
+
+	if (global.rolling_demo)
+	{
+		global.game_mode = 0
+	}
+
+	global.demo_countdown = 60
+	palette_fade.range = 0x003f
+	u16[0xfffff794] = 0
+
+	while (true)
+	{
+		global.frame_state = 0x1c
+
+		waitForNextFrame()
+
+		UpdateRollingDemo()
+		UpdateGameObjects()
+
+		fn009d9e()
+		fn009dde()
+		RenderSprites()
+
+		BlueSpheres.RenderSpheres()
+		fn009d5e()
+		fn009b62()
+
+	#if GAMEAPP
+		BlueSpheres.renderCustomGround()
+		BlueSpheres.renderCustomCharacterShadows()
+	#else
+	#if STANDALONE
+		Renderer.setViewport(getScreenExtend(), 0, 320, 224, 0x0000)
+	#endif
+	#endif
+
+		LoadRequiredSpritePatterns()
+		Kosinski.ProcessModules()
+
+		--u16[0xfffff794]
+		if (s16[0xfffff794] < 0)
+		{
+			u16[0xfffff794] = 2
+			FadePaletteToWhite()
+		}
+
+		if (global.demo_countdown == 0)
+			break
+	}
+}
+
+// Forcibly load Amy's Blue Sphere palette when 2P Tails object loads
+//# address-hook(0x009212) end(0x009274) // Thanks campbellsonic for letting me use and modify this
+function void fn009212()
+{
+    base.fn009212()
+	
+    u64 paletteKey = "bluesphere_palette_slot3"
+	if (XtraChar == 3)
+	{
+		u16 numColors = System.loadExternalPaletteData(paletteKey, 0, 0x800000, 0x20)
+		if (numColors > 0)
+		{
+			u32 dest = 0x802180 + getMainCharacter() * 0x40
+			for (u16 i = 0; i < numColors; ++i)
+			{
+				u16[dest + i * 2] = packColor(u32[0x800000 + i * 4])
+			}
+		}
+	}
+}

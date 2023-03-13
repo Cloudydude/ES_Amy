@@ -1,0 +1,26 @@
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+	// This function gets called once when rendering an object, even if it consists of multiple VDP sprites
+	//  -> That is in contrast to e.g. "Standalone.onDrawVdpSprite" which gets called for each VDP sprite
+	//  -> So if an object's sprites should be replaced with a new loaded graphics, this here is the place to go
+
+	u8 gameMode = global.game_mode & 0x7f
+	bool prioFlag = (objA0.sprite_attributes & 0x8000) != 0
+
+// Level results texts
+	if (XtraChar == 3)
+	{
+		if (gameMode == 0x0c || gameMode == 0x08) || (gameMode == 0x48 || gameMode == 0x0c)
+		{
+			if (objA0.update_address == 0x02dd98) || (objA0.update_address == 0x02ea50 || objA0.update_address == 0x02eac8 || objA0.update_address == 0x02ebcc || objA0.update_address == 0x02ec1e)
+			{
+				if (objA0.animation.sprite == 0x14 || objA0.animation.sprite == 0x15)
+				{
+					Renderer.drawCustomSprite("results_character_name_slot3", px, py, 0, SPRITE_FLAG_PRIO, renderQueue)
+					return true
+				}
+			}
+		}
+	}
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}

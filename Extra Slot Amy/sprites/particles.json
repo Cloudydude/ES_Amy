@@ -1,0 +1,15 @@
+{
+	"dust_00":  { "File": "dust.bmp", "Rect": "0,0,16,16", "Center": "8,8" },
+	"dust_01":  { "File": "dust.bmp", "Rect": "16,0,16,16", "Center": "8,8" },
+	"dust_02":  { "File": "dust.bmp", "Rect": "32,0,16,16", "Center": "8,8" },
+	"dust_03":  { "File": "dust.bmp", "Rect": "48,0,16,16", "Center": "8,8" },
+
+	"amyheart_00":  { "File": "heart.bmp", "Rect": "0,0,16,16", "Center": "8,8" },
+	"amyheart_01":  { "File": "heart.bmp", "Rect": "16,0,16,16", "Center": "8,8" },
+	"amyheart_02":  { "File": "heart.bmp", "Rect": "32,0,16,16", "Center": "8,8" },
+
+	"amyhammerswing_00":  { "File": "hammerswing.bmp", "Rect": "0,0,48,48", "Center": "24,24" },
+	"amyhammerswing_01":  { "File": "hammerswing.bmp", "Rect": "48,0,48,48", "Center": "24,24" },
+	"amyhammerswing_02":  { "File": "hammerswing.bmp", "Rect": "96,0,48,48", "Center": "24,24" },
+	"amyhammerswing_03":  { "File": "hammerswing.bmp", "Rect": "144,0,48,48", "Center": "24,24" },
+}

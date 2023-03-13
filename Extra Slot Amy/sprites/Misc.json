@@ -1,0 +1,22 @@
+{
+	"monitor_icon_amy":  { "File": "amy_life_icon.bmp", "Rect": "0,0,16,16", "Center": "8,8" },
+
+	"Amy_continue_alt":  { "File": "Amy_alt_continues.bmp", "Rect": "0,0,16,22", "Center": "10,24" },
+	"ESS_Cont_Es3":  { "File": "AMY_DA_Garden.png", "Rect": "0,0,16,22", "Center": "9,23" },
+	"continue_icon_slot3":  { "File": "Amy_alt_continues.bmp", "Rect": "0,0,0,0", "Center": "1,1" },
+
+	"Amy_continue_icon_0x00":  { "File": "Amy_dataselect_continue.bmp", "Rect": "29,21,15,23", "Center": "8,24" },
+	"Amy_continue_icon_0x01":  { "File": "Amy_dataselect_continue.bmp", "Rect": "59,21,15,23", "Center": "9,24" },
+	"Amy_continue_icon_0x02":  { "File": "Amy_dataselect_continue.bmp", "Rect": "29,21,15,23", "Center": "8,24" },
+	"Amy_continue_icon_0x03":  { "File": "Amy_dataselect_continue.bmp", "Rect": "59,21,15,23", "Center": "9,24" },
+	
+	"level_select_S3C_Amy":  { "File": "Amy_dataselect_continue.bmp", "Rect": "0,0,16,16", "Center": "0,0" },
+
+	//"result_nameplate_slot3_super":  { "File": "Super_hyper_text.bmp", "Rect": "0,8,74,16", "Center": "0,0" },
+	//"result_nameplate_slot3_hyper":  { "File": "Super_hyper_text.bmp", "Rect": "88,8,74,16", "Center": "0,0" },
+
+	"Amy_Super_text":  { "File": "Super_hyper_text.bmp", "Rect": "0,8,74,16", "Center": "0,0" },
+	"Amy_Hyper_text":  { "File": "Super_hyper_text.bmp", "Rect": "88,8,74,16", "Center": "0,0" },
+	"signpost_slot3_0x01": { "File": "character_amy_signpost.bmp", "Rect": "0,0,48,32", "Center": "24,16" },
+	"Mania_signpost_slot3": { "File": "character_amy_signpost.bmp", "Rect": "52,2,48,30", "Center": "24,14" }
+}

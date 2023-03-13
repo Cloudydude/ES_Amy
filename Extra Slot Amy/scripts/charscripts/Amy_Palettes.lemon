@@ -1,0 +1,106 @@
+global u8 AmyPalette
+
+function string getCharacterPaletteKey(u8 character)
+{
+	u8 gameMode = global.game_mode & 0x7f
+	if (global.xtrachar == 3 && character == 1 && gameMode != 0x4c && gameMode != 0x44 && gameMode != 0x2c && gameMode != 0x30) 
+		return getExtraCharacterPaletteKey(0x03)
+	
+    return base.getCharacterPaletteKey(character)
+}
+
+// Returns the palette key of the specified extra character.
+function string getExtraCharacterPaletteKey(u8 xtrachar)
+{
+	if (xtrachar == 0x03)
+		return stringformat("slot3palette_0%d", AmyPalette)
+	
+	// Return the base function
+	return base.getExtraCharacterPaletteKey(xtrachar)
+}
+
+function string getCharacterBluespherePaletteKey(u8 character)
+{
+	// Special handling for active extra character
+	if (global.xtrachar == 3)
+	{
+		return stringformat("bluesphere_palette_slot3_0%d", AmyPalette)
+	}
+	
+	// Return the base function
+	return base.getCharacterBluespherePaletteKey(character)
+}
+
+// Ending pose fixes
+function string getCharacterEndPosePaletteKey(u8 character)
+{
+	if (global.xtrachar != 3)
+	{
+		return base.getCharacterEndPosePaletteKey(character)
+	}
+
+	return " "
+}
+
+function u8 getModdedEndPosePaletteLine(u8 character, bool isHyperEffect)
+{
+	if (global.xtrachar != 3)
+	{
+		return base.getModdedEndPosePaletteLine(character, isHyperEffect)
+	}
+	return 0
+}
+
+function void loadCharacterEndPosePalette(u8 character, u32 targetAddress, u8 paletteVariant)
+{
+	if (global.xtrachar != 3)
+	{
+		base.loadCharacterEndPosePalette(character, targetAddress, paletteVariant)
+		return
+	}
+
+}
+
+function bool UpdatePaletteEffects.SuperForm.endpose()
+{
+	if (global.xtrachar != 3)
+	{
+		return base.UpdatePaletteEffects.SuperForm.endpose()
+	}
+	return false
+}
+
+function void UpdatePaletteEffects.SuperForm.endpose.moddingVersion(u8 characterVersion)
+{
+	if (global.xtrachar != 3)
+	{
+		base.UpdatePaletteEffects.SuperForm.endpose.moddingVersion(characterVersion)
+		return
+	}
+}
+
+// The function determines the special options of the character palettes, and loads them into memory.
+function void ExtraChar.loadSpecialPalettes(u8 xtrachar, u32 targetAddress, u8 paletteVariant)
+{
+	if (xtrachar == 0x03)
+	{
+		Amy_Grays(targetAddress, paletteVariant)
+		return
+	}
+	
+	base.ExtraChar.loadSpecialPalettes(xtrachar, targetAddress, paletteVariant)
+}
+
+// Here so that Amy's palette loads for Knuckles' ending
+//# address-hook(0x05b2d4) end(0x05b2d4)
+function void fn05b2d4()
+{
+	if (isMainCharacter(CHARACTER_KNUCKLES))
+	{
+		u32 targetAddress = 0x8022C0
+		u8 paletteVariant = 0
+		ExtraChar.loadCharacterPalette(3, targetAddress, paletteVariant)
+		Amy_Grays(targetAddress, paletteVariant)
+	}
+	base.fn05b2d4()
+}

@@ -187,6 +187,9 @@ function void Character.LandingOnGroundResetState()
         char.velocity.x = (s32(lookupCos(reflectedAngle)) * forceX) >> 8
         char.velocity.y = (s32(lookupSin(reflectedAngle)) * forceY) >> 8
 
+		if (competition_mode.active)
+			char.velocity.y -= 0x5A
+
         char.state = char.state.ROLLING
         char.flags |= (char.flag.IN_AIR | char.flag.ROLLING)
         char.flags &= ~char.flag.PUSHING

@@ -113,10 +113,29 @@ function void Amy.Shields()
 	}
 }
 
+//# address-hook(0x011eec) end(0x011fd4)
+//# translated(0x012012) end(0x01209c)
+//# translated(0x01209e) end(0x012100)
+//# translated(0x012102) end(0x012170)
+//# address-hook(0x0153c2) end(0x01560a)
+function void Character.CheckCollision()
+{
+	if (competition_mode.active && competition.xtrachar == 0x03)
+	{
+	#if STANDALONE
+		// Needed only for Amy's hammer bounce when she's player 2 in competition mode.
+		// Otherwise, here hammer bounce will send her flying.
+		mainchar.groundhit.velocity.x = char.velocity.x
+		mainchar.groundhit.velocity.y = char.velocity.y
+	#endif
+	}
+	base.Character.CheckCollision()
+}
+
 function void Character.LandingOnGroundResetState()
 {
     // if !ExtraChar.isAmy()
-	if (global.xtrachar != 3 || A0 != 0xffffb000)
+	if (!competition_mode.active && (global.xtrachar != 3 || char.character != CHARACTER_TAILS || A0 != 0xffffb000) || (competition_mode.active && competition.xtrachar != 0x03))
     {
         base.Character.LandingOnGroundResetState()
         return
@@ -154,13 +173,14 @@ function void Character.LandingOnGroundResetState()
         else
 		{
 			// forceX = (char.flags & char.flag.UNDERWATER) ? 0x580 : 0xa00 //
-			forceY = (char.flags & char.flag.UNDERWATER) ? 0x480 : 0x800
+			forceY = (char.flags & char.flag.UNDERWATER) ? 0x480 : (competition_mode.active) ? 0x6A2 : 0x800
 		}
 
 		forceX = (char.flags & char.flag.UNDERWATER) ? 0x580 : 0xa00 //
 
         s16 vx = mainchar.groundhit.velocity.x
         s16 vy = mainchar.groundhit.velocity.y
+
         u8 moveAngle = lookupAngleByVector(vx, vy)
         u8 groundAngle = char.rotation
         u8 reflectedAngle = groundAngle * 2 - moveAngle
@@ -220,10 +240,8 @@ function void Character.LandingOnGroundResetState()
 
 function void AmyLandingSnds()
 {
-	if AmyPalette == 4
-	{
+	if (AmyPalette == 4)
 		Audio.playAudio("anton_hammerslam", AudioContext.CONTEXT_SOUND)
-	}
 	else
 	{
 		playSound(0x49)

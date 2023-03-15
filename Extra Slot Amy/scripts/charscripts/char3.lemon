@@ -1058,11 +1058,12 @@ function bool ExtraChar.checkStartJump_char3()
 //# address-hook(0x017680) end(0x01770e)
 function void Character.UpdateControlInAir()
 {
-	if (global.xtrachar != 3 || A0 != 0xffffb000)
+	if (!competition_mode.active && (global.xtrachar != 3 || char.character != CHARACTER_TAILS || A0 != 0xffffb000) || (competition_mode.active && competition.xtrachar != 0x03))
 	{
 		base.Character.UpdateControlInAir()
 		return
 	}
+
 	u8 input_state = (char.character == CHARACTER_TAILS) ? control.tails.state : control.player1.state
 	s16 vx = char.velocity.x
 
@@ -1307,7 +1308,8 @@ function void Character.BaseUpdate.Amy()
 
 function void ExtraChar.amyHammerBounceHandler()
 {
-	if ((char.double_jump_state != 0) && (char.state == char.state.ROLLING) && !(control.player1.state & CONTROL_ABC)) || (char.state >= 0x20 && char.state < 0x29) 
+	u8 PlayerInput = (A0 == 0xffffb000) ? control.player1.state : control.player2.state
+	if ((char.double_jump_state != 0) && (char.state == char.state.ROLLING) && !(PlayerInput & CONTROL_ABC)) || (char.state >= 0x20 && char.state < 0x29) 
 	{
 		char.double_jump_state = 0
 		char.jumping = 0
@@ -1325,7 +1327,8 @@ function void ExtraChar.amyHammerBounceHandler()
 		//playSound(0x8c)
 		HammerSnds2()
 
-		ExtraChar.amySpawnHammerSwing()
+		if !(competition_mode.active)
+			ExtraChar.amySpawnHammerSwing()
 	}
 }
 
@@ -1879,14 +1882,38 @@ function u32 address2()
 
 // Amy in competition mode
 // Sets the availability status of the character for selection in the Competition menu.
-// function bool ExtraChar.CompetitionMode.isCharacterAvailable(u8 xtrachar)
-// {
-// 	if (xtrachar == 0x03)
-// 		return true
+function bool ExtraChar.CompetitionMode.isCharacterAvailable(u8 xtrachar)
+{
+	if (xtrachar == 0x03)
+		return true
 	
-// 	// Call the base function
-// 	return base.ExtraChar.CompetitionMode.isCharacterAvailable(xtrachar)
-// }
+	// Call the base function
+	return base.ExtraChar.CompetitionMode.isCharacterAvailable(xtrachar)
+}
+
+function void CompetitionMode.Character.BaseUpdate(u32 mainRoutineTableAddress)
+{
+	base.CompetitionMode.Character.BaseUpdate(mainRoutineTableAddress)
+	if (competition.xtrachar == 0x03)
+		ExtraChar.amyHammerBounceHandler()
+	// base.CompetitionMode.Character.BaseUpdate(mainRoutineTableAddress)
+}
+
+
+function void SonicPressedJumpInMidAir()
+{
+	if (competition_mode.active && competition.xtrachar == 0x03)
+	{
+		if (char.double_jump_state == 0)
+		{
+			HammerSnds()
+			HammerSnds2()
+			char.double_jump_state = 1	// Always set this flag; needed for Hammer Bounce
+		}
+		return
+	}
+	base.SonicPressedJumpInMidAir()
+}
 
 function string RenderExtraCharIcon(u8 xtrachar)
 {

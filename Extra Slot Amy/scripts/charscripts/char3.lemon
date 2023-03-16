@@ -1950,11 +1950,3 @@ function u32 getCharacterColorsForControllerLEDs(u8 character)
 {
 	return (character == CHARACTER_SONIC && global.xtrachar == 3 && levelselect.characters != 0) ? 0x2500ff : base.getCharacterColorsForControllerLEDs(character)
 }
-
-// // Super then hyper compatibility
-// function bool GoSuperorHyper()
-// {
-// 	if (global.xtrachar == 3)
-// 		return (char.animation.sprite == 0xda)
-// 	return base.GoSuperorHyper()
-// }

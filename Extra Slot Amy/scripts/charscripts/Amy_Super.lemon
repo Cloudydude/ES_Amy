@@ -9,52 +9,6 @@ function void fn01a170()
 	// No flickies
 }
 
-// function void ExtraChar.loadSpecialPalettes(u8 xtrachar, u8 character, u32 targetAddress, u8 paletteVariant)
-// {
-// 	u8 gameMode = global.game_mode & 0x7f
-	
-// 	if (xtrachar == 3 && character == CHARACTER_TAILS && gameMode != 0x4c && gameMode != 0x44 && gameMode != 0x2c && gameMode != 0x30)
-//     {
-// 		System.writeDisplayLine("KIMMY")
-// 		u16[targetAddress + 2 * 4] = 0x000e
-// 		// if (global.game_mode == 0x9c)
-// 		// // 	targetAddress = 0x802280
-// 		// if (Ray_shoe_color == 0)
-// 		// {
-// 		// 	if (Ray_Pal == 6) // Guava red Ray_shoe_color
-// 		// 	{
-// 		// 		u16[targetAddress + 2 * 8] = (paletteVariant != 0) ? 0x060c : 0x034d
-// 		// 		u16[targetAddress + 2 * 9] = (paletteVariant != 0) ? 0x0406 : 0x0526
-// 		// 		u16[targetAddress + 2 * 19] = (paletteVariant != 0) ? 0x0302 : 0x0402 // Mania third red shoe color
-// 		// 	}
-// 		// 	else
-// 		// 	{
-// 		// 		u16[targetAddress + 2 * 8] = (paletteVariant != 0) ? 0x060C : 0x000e
-// 		// 		u16[targetAddress + 2 * 9] = (paletteVariant != 0) ? 0x0406 : 0x0008
-// 		// 		u16[targetAddress + 2 * 19] = (paletteVariant != 0) ? 0x0403 : 0x0004 // Mania third red shoe color
-// 		// 	}
-// 		// }
-
-// 		// if (Rays_Grays == 1 && (Ray_Pal == 1 || Ray_Pal == 2 || Ray_Pal == 6))
-// 		// {
-// 		// 	u16[targetAddress + 2 * 12] = (paletteVariant != 0) ? 0x0eac : 0x0ecc
-// 		// 	u16[targetAddress + 2 * 13] = (paletteVariant != 0) ? 0x0c8a : 0x0caa
-// 		// 	u16[targetAddress + 2 * 14] = (paletteVariant != 0) ? 0x0846 : 0x0866
-// 		// }
-
-// 		// if (Ray_Pal == 3 && Ray_Sprite_type == 0)
-// 		// {
-// 		// 	u16[targetAddress + 2 * 11] = (paletteVariant != 0) ? 0x0314 : 0x0026
-// 		// }
-		
-// 		return
-// 	}
-	
-// 	base.ExtraChar.loadSpecialPalettes(xtrachar, character, targetAddress, paletteVariant)
-// }
-
-// global bool Ray_UnderDaSea
-
 global bool Amy_Super_Pallete
 global bool Amy_Glow
 global bool Amy_Flash

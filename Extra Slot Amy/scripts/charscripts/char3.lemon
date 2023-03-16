@@ -1165,7 +1165,7 @@ function void Character.Initialization.Tails()
 {
 	if (global.xtrachar != 3)
 	{
-		Character.Initialization.shared(CHARACTER_TAILS)
+		base.Character.Initialization.Tails()
 		return
 	}
 
@@ -1271,7 +1271,6 @@ function void Character.BaseUpdate.Amy()
 	{
 		if (char.state == char.state.SPINDASH)
 			char.animation.sprite = (0x4B + char.animation.sprite)
-
 
 		// This is probably gonna get scrapped at somepoint
 		if ((char.animation.sprite <= 32 || char.animation.sprite == 0x90) && char.state == char.state.RUNNING) // 6 frame walk
@@ -1951,3 +1950,11 @@ function u32 getCharacterColorsForControllerLEDs(u8 character)
 {
 	return (character == CHARACTER_SONIC && global.xtrachar == 3 && levelselect.characters != 0) ? 0x2500ff : base.getCharacterColorsForControllerLEDs(character)
 }
+
+// // Super then hyper compatibility
+// function bool GoSuperorHyper()
+// {
+// 	if (global.xtrachar == 3)
+// 		return (char.animation.sprite == 0xda)
+// 	return base.GoSuperorHyper()
+// }

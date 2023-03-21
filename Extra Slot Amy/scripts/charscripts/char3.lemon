@@ -65,7 +65,6 @@ function bool ExtraChar.renderHUD_char3()
 			HUD.drawNumber("hud_digit_%d", player.score * 10, baseX + 0x58, baseY, renderQueue)
 			++renderQueue
 
-			// Waiting until we have some continue icons
 			// Continue hud mod
 			if (Renderer.hasCustomSprite("soniccont"))
 			{

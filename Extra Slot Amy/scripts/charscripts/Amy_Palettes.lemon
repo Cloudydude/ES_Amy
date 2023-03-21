@@ -13,7 +13,9 @@ function string getCharacterPaletteKey(u8 character)
 function string getExtraCharacterPaletteKey(u8 xtrachar)
 {
 	if (xtrachar == 0x03)
+	{
 		return stringformat("slot3palette_0%d", AmyPalette)
+	}
 	
 	// Return the base function
 	return base.getExtraCharacterPaletteKey(xtrachar)

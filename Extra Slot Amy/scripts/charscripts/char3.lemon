@@ -1159,6 +1159,16 @@ function void Character.BaseUpdate.Tails()
 	Character.BaseUpdate.Amy()
 }
 
+// Ignore the setting for Super and Hyper Tails
+// Give Amy a Super and Hyper form
+function u32 Game.getSetting(u32 settingId)
+{
+	if (global.xtrachar == 3 && settingId == SETTING_HYPER_TAILS)
+		return 1
+
+	return base.Game.getSetting(settingId)
+}
+
 //# address-hook(0x0136ca) end(0x0137c2)
 function void Character.Initialization.Tails()
 {

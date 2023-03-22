@@ -161,17 +161,18 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 			}
 		}
 
-		if (objA0.update_address == 0x05e18a) 
-		{	
-			if (outro.ending_type >= 0 && !Amy_DONT)
-			{
-				AmyGoldpalette()
-				SuperandHyperPalette_Amy(AmyColor1, AmyColor2, AmyColor3)
-			}
-			Renderer.drawCustomSprite("MightyPose_0x01", px, py, 0x60, objA0.render_flags | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
-			//Renderer.drawCustomSprite(stringformat("RayPose_0x%02x", objA0.animation.sprite), px + ((objA0.animation.sprite == 3) ? 0x30 : 0x50), py, 0x60, objA0.render_flags | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
-			return true        
-		}
+		//Here until we have something to show for the ending
+		// if (objA0.update_address == 0x05e18a) 
+		// {	
+		// 	if (outro.ending_type >= 0 && !Amy_DONT)
+		// 	{
+		// 		AmyGoldpalette()
+		// 		SuperandHyperPalette_Amy(AmyColor1, AmyColor2, AmyColor3)
+		// 	}
+		// 	Renderer.drawCustomSprite("MightyPose_0x01", px, py, 0x60, objA0.render_flags | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
+		// 	//Renderer.drawCustomSprite(stringformat("RayPose_0x%02x", objA0.animation.sprite), px + ((objA0.animation.sprite == 3) ? 0x30 : 0x50), py, 0x60, objA0.render_flags | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
+		// 	return true        
+		// }
 
 		if ((objA0.update_address == 0x02ebe8 || objA0.update_address == 0x02ec4a) && objA0.animation.sprite >= 0x29 && objA0.animation.sprite <= 0x2b)
 		{
@@ -184,7 +185,7 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 }
 
 
-// // This block here is for when we have something to show for the ending
+// This block here is for the flash effect
 global bool Amy_DONT
 //# address-hook(0x08555e) end(0x08558e)
 function void fn08555e()
@@ -231,16 +232,7 @@ function string getManiaInspSignpost(u8 character)
 	u64 key = 0x00
 
 	if (global.xtrachar == 3 && character == CHARACTER_TAILS)
-	{
 		key = "Mania_signpost_slot3"
-		// if (character == CHARACTER_SONIC)
-		// 	key = (Sprite_type) ? "Mania_Signpost_slot1_S3" : "Mania_Signpost_slot1"
-		// else if (character == CHARACTER_TAILS)
-		// {
-		// 	if (rayPartner > 2)
-		// 		key = System.getGlobalVariableValueByName("Ray_Sprite_type") ? "Mania_Signpost_slot2_S3" : "Mania_Signpost_slot2"
-		// }
-	}
 
 	if (key != 0x00 && Renderer.hasCustomSprite(key))
 		return key

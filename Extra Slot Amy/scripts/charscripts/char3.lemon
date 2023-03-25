@@ -1891,6 +1891,7 @@ function void SpringVertical.updateInternal(bool flipY)
 	DrawOrUnloadObject()
 }
 
+#if GAMEAPP <= 0x22051500
 // Fix for LBZ act 1 where the snow particles don't appear at the start
 //# address-hook(0x039ad2) end(0x039b64)
 function void fn039ad2()
@@ -1941,6 +1942,7 @@ function u32 address2()
 {
 	return (u8[A2 + 0x38] == CHARACTER_TAILS) ? 0xffffccb2 : 0xffffcc68
 }
+#endif
 
 // Amy in competition mode
 // Sets the availability status of the character for selection in the Competition menu.

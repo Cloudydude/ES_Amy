@@ -268,7 +268,11 @@
 	"character_amy_balloon_hang":  { "File": "character_amy.bmp", "Rect": "270,609,22,40", "Center": "11,20" },
 
 	"character_amy_hammerbounce_0":  { "File": "character_amy_hammerbounce.bmp", "Rect": "0,0,56,56", "Center": "28,28" },
-	"character_amy_hammerbounce_1":  { "File": "character_amy_hammerbounce.bmp", "Rect": "56,0,56,56", "Center": "28,28" },
-	"character_amy_hammerbounce_2":  { "File": "character_amy_hammerbounce.bmp", "Rect": "112,0,56,56", "Center": "28,28" },
-	"character_amy_hammerbounce_3":  { "File": "character_amy_hammerbounce.bmp", "Rect": "168,0,56,56", "Center": "28,28" },
+	"character_amy_hammerbounce_1":  { "File": "character_amy_hammersmear.bmp", "Rect": "0,0,64,64", "Center": "32,32" },
+	"character_amy_hammerbounce_2":  { "File": "character_amy_hammerbounce.bmp", "Rect": "56,0,56,56", "Center": "28,28" },
+	"character_amy_hammerbounce_3":  { "File": "character_amy_hammersmear.bmp", "Rect": "64,0,64,64", "Center": "32,32" },
+	"character_amy_hammerbounce_4":  { "File": "character_amy_hammerbounce.bmp", "Rect": "112,0,56,56", "Center": "28,28" },
+	"character_amy_hammerbounce_5":  { "File": "character_amy_hammersmear.bmp", "Rect": "128,0,64,64", "Center": "32,32" },
+	"character_amy_hammerbounce_6":  { "File": "character_amy_hammerbounce.bmp", "Rect": "168,0,56,56", "Center": "28,28" },
+	"character_amy_hammerbounce_7":  { "File": "character_amy_hammersmear.bmp", "Rect": "192,0,64,64", "Center": "32,32" },
 }

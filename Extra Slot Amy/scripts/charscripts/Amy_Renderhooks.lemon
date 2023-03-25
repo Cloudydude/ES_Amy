@@ -94,6 +94,22 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 			Amy_Grays(dest, 0)
 		}
 
+		// Blue Spheres game mode winning screens
+		if (gameMode == 0x34 || gameMode == 0x48 || gameMode == 0x2c || gameMode == 0x30 || global.game_mode == 0x85 || global.game_mode == 0x87) //just check for Ray, thanks!
+		{
+			if (bluespheres.xtrachar)
+			{
+				if ((objA0.mapping_offset == 0x146620 || objA0.update_address == 0x04e000))
+				{
+					u8 atex = getatex(0x03)
+					u8 animation = (objA0.animation.sprite == 0xb0) ? 0xa5 : 0xa6
+					key = stringformat("character_amy_0x%02x", animation)
+					Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue)
+					return true
+				}
+			}
+		}
+
 		//Keeping these incase we need to reorder them.
 		if (gameMode == 0x48 || gameMode == 0x0c)
 		{

@@ -1582,7 +1582,7 @@ function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationS
 		return base.Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
 	}
 
-	if (A0 == 0xffffb04a)
+	if (A0 == 0xffffb04a && !bluespheres.xtrachar)
 	{
 		u8 anim = ((level.framecounter >> 2) % (4))
 		u8 anim2 = ((level.framecounter >> 3) % (2))
@@ -1595,9 +1595,9 @@ function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationS
 		return key
 	}
 
-	if hammerbounceframe > 2
+	if hammerbounceframe > 6
 		hammerbounceframe = 0
-	else if !(global.framecounter.low & 0x01)
+	else
 		hammerbounceframe++
 
 	if (tails.carrying) // Amy hanging onto the balloon
@@ -1958,4 +1958,15 @@ function void fn042028()
 function u32 getCharacterColorsForControllerLEDs(u8 character)
 {
 	return (character == CHARACTER_SONIC && global.xtrachar == 3 && levelselect.characters != 0) ? 0x2500ff : base.getCharacterColorsForControllerLEDs(character)
+}
+
+//# address-hook(0x04e24c) end(0x04e25e)
+function void fn04e24c()
+{
+	// Sonic going Super at MAX difficulty
+	if (global.xtrachar != 3) // Amy shouldn't go super here
+	{
+		base.fn04e24c()
+		return
+	}
 }

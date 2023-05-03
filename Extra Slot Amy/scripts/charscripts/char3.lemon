@@ -1457,6 +1457,8 @@ function void Character.Initialization.Tails()
 		return
 	}
 
+	Amy.KillScreen = false
+
 	IsAmyUsingShield = false
 
 	AmyDustControl = 0
@@ -2338,4 +2340,21 @@ function void fn08160a()
 {
 	super.palettefx.timer.tails = 0x0f
 	base.fn08160a()
+}
+
+//Fix for HPZ when constantly bouncing into Eggman
+//# address-hook(0x064daa) end(0x064dca)
+function void fn064daa()
+{
+	if (u8[0xfffffab8] & 0x20)
+	{
+		A2 = 0xffffb000
+		if (u8[A2 + 0x2f] != 0)
+		{
+			u8[A2 + 0x2f] = 0
+			u8[A2 + 0x20] = char.state.ROLLING
+			u8[A2 + 0x40] = 0
+		}
+	}
+	base.fn064daa()
 }

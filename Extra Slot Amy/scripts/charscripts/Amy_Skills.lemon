@@ -132,6 +132,19 @@ function void Character.CheckCollision()
 	base.Character.CheckCollision()
 }
 
+global bool Amy.KillScreen // Delays the clear screen for a little bit so that certain objects can work
+
+//# address-hook(0x0149a2) end(0x0149e2)
+function void Character.UpdateTailsRollingInAir()
+{
+	if (global.xtrachar == 3 && A0 == 0xffffb000 && Amy.KillScreen)
+	{
+		Character.ClearEnemiesOnScreen()
+		Amy.KillScreen = false
+	}
+	base.Character.UpdateTailsRollingInAir()
+}
+
 global bool HyperAmyDontFlash
 
 function void Character.LandingOnGroundResetState()
@@ -223,7 +236,8 @@ function void Character.LandingOnGroundResetState()
         if (super.active.tails == 0xff && !HyperAmyDontFlash) // Hyper
         {
             playSound(0x9b)
-            Character.ClearEnemiesOnScreen()
+			Amy.KillScreen = true
+            // Character.ClearEnemiesOnScreen()
 			global.whiteflash_timeout = 4
 			HyperAmyDontFlash = true
         }

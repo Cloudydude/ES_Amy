@@ -1,0 +1,6 @@
+{
+	"hud_lives_icon_slot3":  { "File": "amy_life_icon.bmp", "Rect": "0,0,53,16", "Center": "0,0" },
+	"result_nameplate_slot3":  { "File": "character_amy_levelresults_nameplate.bmp", "Rect": "0,0,56,16", "Center": "-5,0" },
+	"result_nameplate_slot3_CD":  { "File": "character_amy_levelresults_nameplate.bmp", "Rect": "0,16,56,16", "Center": "-5,0" },
+	"hud_bonus_icon_slot3":   { "File": "character_amy_levelresults_bonusicon.bmp", "Rect":  "0,0,12,19" }
+}

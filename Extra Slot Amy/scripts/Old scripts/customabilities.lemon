@@ -1,0 +1,379 @@
+global u8 HammerSpinTimer
+global u8 HammerJumpTimer
+global u8 HammerSwingTimer
+global u8 HammerSwingSpecialAction
+
+//# address-hook(0x0137c4) end(0x0138f4)
+function void Character.UpdateNormalState.Tails()
+{
+	if (XtraChar != 3)
+	{
+		base.Character.UpdateNormalState.Tails()
+		return
+	}
+
+	if (global.chaos_emeralds == 0 && global.super_emeralds == 0)
+			Game.setDiscordDetails("Amy")
+	else if (global.super_emeralds == 0)
+	{
+		Game.setDiscordDetails(stringformat("Amy (%d Chaos Emerald%s)", global.chaos_emeralds, (global.chaos_emeralds == 1) ? "" : "s"))
+		if (global.chaos_emeralds == 7)
+			Game.setDiscordDetails("Amy (All Chaos Emeralds)")
+	}
+	else if (global.super_emeralds > 0)
+	{
+		Game.setDiscordDetails(stringformat("Amy (%d Super Emerald%s)", global.super_emeralds, (global.super_emeralds == 1) ? "" : "s"))
+		if (global.super_emeralds == 7)
+			Game.setDiscordDetails("Amy (All Super Emeralds)")
+	}
+	Game.setDiscordSmallImage("character_unknown")
+
+if (char.state == char.state.GOT_HURT) || (char.state == char.state.GOT_HURT_PANIC) || (char.state == char.state.DIED)
+{
+HammerSpinTimer = 0
+HammerJumpTimer = 0
+HammerSwingTimer = 0
+HammerSwingSpecialAction = 0
+}
+
+if (HammerSpinTimer != 0)
+{
+--HammerSpinTimer
+}
+
+if (HammerJumpTimer != 0)
+{
+--HammerJumpTimer
+if ((level.framecounter.low & 0x03) == 0)
+{
+++HammerAnimFrame
+}
+}
+
+if (HammerSwingTimer != 0) && (HammerSwingTimer != 1)
+{
+if ((level.framecounter.low & 0x03) == 0)
+{
+++HammerAnimFrame
+}
+if (super.active.tails != 0)
+{
+if (char.flags & char.flag.FACING_LEFT)
+{
+char.velocity.x = -0x800
+char.groundspeed = -0x800
+}
+if ((char.flags & char.flag.FACING_LEFT) == 0)
+{
+char.velocity.x = 0x800
+char.groundspeed = 0x800
+}
+}
+else
+{
+if (char.flags & char.flag.FACING_LEFT)
+{
+char.velocity.x = -0x400
+char.groundspeed = -0x400
+}
+if ((char.flags & char.flag.FACING_LEFT) == 0)
+{
+char.velocity.x = 0x400
+char.groundspeed = 0x400
+}
+}
+char.flags |= char.flag.CONTROL_LOCK
+--HammerSwingTimer
+}
+
+if (HammerSwingTimer == 1)
+{
+char.state = char.state.RUNNING
+char.velocity.x = char.velocity.x / 4
+char.groundspeed = char.groundspeed / 4
+char.flags &= ~char.flag.CONTROL_LOCK
+HammerSwingTimer = 0
+}
+
+if (HammerSpinTimer == 1)
+{
+char.state = char.state.ROLLING
+char.jumping = 0
+char.flags &= ~char.flag.CONTROL_LOCK
+char.groundspeed = 0
+}
+
+if (char.state != char.state.LIFTED)
+{
+HammerSpinTimer = 0
+}
+
+	if (updateDebugModeInput(true))
+		return
+
+	if (A0 == 0xffffb000)
+	{
+		// Tails is the main player
+		if (player1.control_override == 0)
+		{
+			control.tails = control.pad1
+			control.player1 = control.pad1
+			if (tails.ai_routine >= 0x1a && competition_mode.active == 0)
+			{
+				Character.TailsAI.Update()
+			}
+		}
+		else
+		{
+			control.tails = control.player1
+		}
+	}
+	else
+	{
+		// Tails is the second player
+		if (player2.control_override == 0)
+		{
+			control.tails = control.player2
+		}
+
+		if (player2.control_override >= 0 && competition_mode.active == 0)
+		{
+			Character.TailsAI.Update()
+		}
+	}
+
+	if (char.control_flags & 0x01)
+	{
+		// Character is not directly controllable (but may be indirectly via an object, like when hanging on a pole or similar)
+		char.double_jump_state = 0
+		if (tails.carrying)
+		{
+			A1 = 0xffffb000
+			objA1.flags2a |= char.flag.IN_AIR
+			u8[A1 + 0x2e] = 0
+			tails.carrying = 0
+			tails.catch_timeout = 0
+		}
+	}
+	else
+	{
+		// Call update function depending on flags
+		pushA456()
+		if (char.flags & char.flag.IN_AIR)
+		{
+			if (char.flags & char.flag.ROLLING)
+				Character.UpdateTailsRollingInAir()
+			else
+				Character.UpdateTailsUprightInAir()
+		}
+		else
+		{
+			if (char.flags & char.flag.ROLLING)
+				Character.UpdateTailsRollingOnGround()
+			else
+				Character.UpdateTailsUprightOnGround()
+		}
+		popA456()
+	}
+
+	if (level.vertical_wrap == 0xff00)
+	{
+		char.position.y.u16 &= level.height.bitmask
+	}
+
+	Character.updateBonusEffects()
+	Character.UpdateRingsInSuperForm()
+	Character.WriteToPositionBackup()
+	Character.checkForWaterSurface()
+
+	char.angle_sensor_1 = u8[0xfffff768]
+	char.angle_sensor_2 = u8[0xfffff76a]
+
+	if (u8[0xfffff7c9] != 0)
+	{
+		if (char.state == 0)
+			char.state = char.state.former
+	}
+
+	if ((char.control_flags & 0x02) == 0)	// Hanging flag
+	{
+		UpdateTailsAnimation()
+		if (global.inv_gravity)
+		{
+			char.render_flags ^= render_flag.FLIP_Y
+		}
+		UpdateTailsSpritePatterns()
+	}
+
+	if ((char.control_flags & 0xa0) == 0)
+	{
+		Character.CheckCollisionsWithDynamicObjects()
+	}
+
+if (HammerSwingTimer == 0) && ((char.flags & char.flag.IN_AIR) == 0)
+{
+if (char.state == char.state.STANDING) || (char.state == char.state.RUNNING)
+{
+if (control.player1.pressed & CONTROL_B)
+{
+HammerAnimFrame = 0
+HammerSwingTimer = 30
+}
+}
+}
+
+if (HammerAnimFrame == 4) && ((char.flags & char.flag.IN_AIR) == 0) && (HammerSwingSpecialAction == 0)
+{
+HammerSwingSpecialAction = 1
+playSound(0x8b)
+if (super.active.tails & 0x80)
+{
+playSound(0x49)
+Character.ClearEnemiesOnScreen()
+camera.hyper_knux_shake = 0x0114
+}
+else if (super.active.tails)
+{
+playSound(0x5d)
+}
+}
+
+if (HammerAnimFrame != 4)
+{
+HammerSwingSpecialAction = 0
+}
+
+
+
+
+
+
+
+
+if (char.state == char.state.LOOKING_UP)
+{
+if ((char.flags & char.flag.IN_AIR) == 0) && (control.player1.pressed & CONTROL_ABC) && (control.player1.state & CONTROL_UP) && (player1.control_override == 0)	// Last check is needed in cutscenes (e.g. end of MHZ 2)
+{
+HammerAnimFrame = 0
+HammerJumpTimer = 29
+playSound(0x8b)
+char.flags |= char.flag.IN_AIR
+if (char.flags & char.flag.UNDERWATER)
+{
+				if (super.active.tails & 0x80)
+				{
+char.velocity.y = -0x600
+				}
+	            else if (super.active.tails)
+				{
+char.velocity.y = -0x500
+				}
+				if (!super.active.tails)
+				{
+char.velocity.y = -0x400
+				}
+}
+else
+{
+				if (super.active.tails & 0x80)
+				{
+playSound(0x47)
+playSound(0x49)
+char.velocity.y = -0x999 + -0x350
+camera.hyper_knux_shake = 0x7
+camera.screenshake.state = 0x7
+				}
+	            else if (super.active.tails)
+				{
+playSound(0x47)
+char.velocity.y = -0x999 + -0x250
+				}
+				if (!super.active.tails)
+				{
+char.velocity.y = -0x999 + -0x50
+				}
+}
+char.state = char.state.TAILS_SWIMTIRED
+}
+}
+if (char.state == char.state.TAILS_SWIMTIRED)
+{
+if (char.animation.frame == 2)
+{
+char.animation.frame = 0
+}
+}
+if (char.state == char.state.SPINDASH)
+{
+if (char.animation.frame == 2)
+{
+char.animation.frame = 0
+}
+}
+if (char.state == char.state.LIFTED)
+{
+char.animation.timer >>= 1
+}
+if (char.state == char.state.TAILS_SWIMTIRED)
+{
+char.animation.timer >>= 1
+}
+if (char.state == char.state.GOT_HURT)
+{
+HammerSwingTimer = 0
+HammerSpinTimer = 0
+char.state = char.state.GOT_HURT_PANIC
+}
+if (char.state == char.state.LIFTED)
+{
+if (char.animation.frame == 6)
+{
+char.animation.frame = 0
+}
+}
+if (char.state == char.state.LIFTED)
+{
+if (char.double_jump_state == 1) && (HammerSpinTimer != 0)
+{
+if (control.player1.state & CONTROL_ABC)
+{
+if (char.flags & char.flag.UNDERWATER)
+{
+char.velocity.y -= 0x9
+}
+else
+{
+char.velocity.y -= 0x30
+}
+if (abs(char.velocity.x) <= 0x900)
+{
+if (control.player1.state & CONTROL_LEFT)
+{
+char.velocity.x -= 0x12
+}
+if (control.player1.state & CONTROL_RIGHT)
+{
+char.velocity.x += 0x12
+}
+}
+}
+else
+{
+char.state = char.state.ROLLING
+char.jumping = 0
+char.flags &= ~char.flag.CONTROL_LOCK
+char.groundspeed = 0
+}
+}
+}
+if (char.state == char.state.LIFTED)
+{
+if (char.double_jump_state == 1)
+{
+			if (((level.framecounter.low + 8) & 0x0f) == 0)
+			{
+				playSound(0xba)
+			}
+}
+}
+}

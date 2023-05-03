@@ -1,0 +1,2341 @@
+include Amy_Palettes
+include Amy_BlueSpheres
+include Amy_ParticleEffects
+include Amy_Skills
+include Amy_Renderhooks
+include Amy_Super
+include Amy_Intro
+include Amy_Balloon
+include Amy_Origins_SSZ
+include Amy_Music
+
+define u16 continueHUD.y = 185
+define u16 continueHUD.x = 20
+
+define u8 AmyDustControl = u8[0xffffFFDC + ((A0 == 0xffffb000) ? 0 : 0x02)]
+
+global u8 useAmyDashAnim
+
+global bool Amy_Speed_Shoes
+
+define u16	AMY_DASH_ANIM_SPEED	= 0xa00
+define u8	AMY_DASH_ANIM_FRAME_FIRST = 0xbd
+define u8	AMY_DASH_ANIM_FRAME_LAST = 0xc0
+
+function bool ExtraChar.isAmy()
+{
+	if (global.xtrachar == 3) && (u8[0xfffb000 + 0x38] == CHARACTER_TAILS && !competition_mode.active)
+		return true
+	else
+		return false
+}
+
+function bool ExtraChar.isP1Amy()
+{
+	if (global.xtrachar== 3) && (isMainCharacter(CHARACTER_TAILS) && !competition_mode.active)
+		return true
+	else
+		return false
+}
+
+function void ExtraChar.startup_char3()
+{
+	global.characters = CHARS_TAILS_ALONE
+	if (global.game_mode == 0x1c) // Level Select
+		levelselect.characters = 2
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/hud/hud.lemon
+function bool ExtraChar.renderHUD_char3()
+{
+#if STANDALONE
+	if (DEBUG_DISABLE_HUD)
+		return false
+#endif
+
+	s16 baseX = global.level_started
+	if (baseX < 0)
+	{
+		baseX += 8
+		global.level_started = baseX
+	}
+	baseX += 0x0f
+	s16 baseY = 0x08
+	u16 renderQueue = 0xe000
+
+	bool isBonusStage = (global.zone >= 0x13 && global.zone <= 0x15)
+#if STANDALONE
+	if (!debug_mode.state)
+	{
+		if (!isBonusStage)
+		{
+			// Score
+			HUD.drawSprite("hud_text_score", baseX, baseY, renderQueue)
+			++renderQueue
+			HUD.drawNumber("hud_digit_%d", player.score * 10, baseX + 0x58, baseY, renderQueue)
+			++renderQueue
+
+			// Continue hud mod
+			if (Renderer.hasCustomSprite("soniccont"))
+			{
+				u64 key = "Amy_continue_alt"
+
+				if (Mods.isModActive("Continues HUD"))
+				{
+					Renderer.drawCustomSprite(key, baseX + continueHUD.x -  11, continueHUD.y +  13, 0, SPRITE_FLAG_PRIO, 0xe000, 0,255)
+
+					if (continues_counter >= 10)
+					{
+						HUD.drawSmallDigit(u16((continues_counter / 10) % 10), baseX + continueHUD.x, continueHUD.y, 0xe000)
+						HUD.drawSmallDigit(u16(continues_counter % 10), baseX + continueHUD.x + 8, continueHUD.y, 0xe000)
+					}
+					else
+						HUD.drawSmallDigit(u16(continues_counter % 10), baseX + continueHUD.x, continueHUD.y, 0xe000)
+				}
+				else if (Mods.isModActive("Continues HUD Extra"))
+				{
+					u16 continuetick = 0
+					u16 continuemove = 0
+					u16 continuemove.y = (-13)
+					while (continuetick < continues_counter)
+					{
+						Renderer.drawCustomSprite(key, baseX + continueHUD.x - 11 + continuemove, max(continueHUD.y - continuemove.y, 0), 0, SPRITE_FLAG_PRIO, 0xe000, 0,255)
+						continuemove += 21
+						++continuetick
+						if (continuemove > 370)
+						{
+							continuemove = 0
+							continuemove.y += 26
+						}
+					}
+				}
+			}
+
+			// Time
+			{
+				bool show = (timer.minutes < 9 || isBonusStage || (level.framecounter & 0x08) || Game.getSetting(SETTING_INFINITE_TIME))
+				HUD.drawSprite(show ? "hud_text_time" : "hud_text_time_red", baseX, baseY + 0x10, renderQueue)
+				++renderQueue
+
+				// Unfortunately, the time progress is done later inside the frame, so we don't have the right value in "timer.frames" yet
+				//  -> If the conditions for time progress are met, add one and everything will be alright
+				u16 minutes = timer.minutes
+				u16 seconds = timer.seconds
+				u16 frames = timer.frames
+				if (hud.dirty.timer && !global.game.paused && timer.alldata < 0x93b3b)	// That is 9:59 and 59 frames
+				{
+					++frames
+					seconds += (frames / 60)
+					minutes += (seconds / 60)
+					frames %= 60
+					seconds %= 60
+				}
+				u16 centiseconds = (frames * 99 + 30) / 59
+
+				u16 px = (minutes >= 10) ? (baseX + 8) : baseX
+				if (Game.getSetting(SETTING_EXTENDED_HUD))
+				{
+					if (minutes >= 10)
+						HUD.drawDigit(minutes / 10, px + 0x20, baseY + 0x10, renderQueue)
+					HUD.drawDigit(minutes % 10, px + 0x28, baseY + 0x10, renderQueue)
+					HUD.drawSprite("hud_char_minutes", px + 0x30, baseY + 0x10, renderQueue)
+					HUD.drawDigit(seconds / 10, px + 0x38, baseY + 0x10, renderQueue)
+					HUD.drawDigit(seconds % 10, px + 0x40, baseY + 0x10, renderQueue)
+					HUD.drawSprite("hud_char_seconds", px + 0x48, baseY + 0x10, renderQueue)
+					HUD.drawDigit(centiseconds / 10, px + 0x50, baseY + 0x10, renderQueue)
+					if (minutes < 10)
+						HUD.drawDigit(centiseconds % 10, px + 0x58, baseY + 0x10, renderQueue)
+				}
+				else
+				{
+					if (minutes >= 10)
+						HUD.drawDigit(minutes / 10, px + 0x20, baseY + 0x10, renderQueue)
+					HUD.drawDigit(minutes % 10, px + 0x28, baseY + 0x10, renderQueue)
+					HUD.drawSprite("hud_char_colon", px + 0x30, baseY + 0x10, renderQueue)
+					HUD.drawDigit(seconds / 10, px + 0x38, baseY + 0x10, renderQueue)
+					HUD.drawDigit(seconds % 10, px + 0x40, baseY + 0x10, renderQueue)
+				}
+				++renderQueue
+			}
+		}
+
+		// Rings
+		{
+			u16 py = (isBonusStage) ? baseY : baseY + 0x20
+			bool show = (ring_counter != 0 || (level.framecounter & 0x08))
+			HUD.drawSprite(show ? "hud_text_rings" : "hud_text_rings_red", baseX, py, renderQueue)
+			++renderQueue
+
+			u16 px = baseX + (!isBonusStage && Game.getSetting(SETTING_EXTENDED_HUD) ? 0x58 : 0x40)
+			for (u32 value = ring_counter;;)
+			{
+				HUD.drawDigit(value % 10, px, py, renderQueue)
+				px -= 8
+				value /= 10
+				if (value == 0)
+					break
+			}
+			++renderQueue
+		}
+
+		// Lives (not visible in Time Attack or with infinite lives setting)
+		if (!Game.isTimeAttack() && !Game.getSetting(SETTING_INFINITE_LIVES))
+		{
+			bool useMobilePosition = HUD.useMobileLivesDisplay()
+			u16 px = useMobilePosition ? (getScreenWidth() - baseX - 0x30) : baseX
+			u16 py = useMobilePosition ? baseY : 200
+
+			HUD.drawSprite(getCharacterLivesIcon(getMainCharacter()), px, py, renderQueue)
+			++renderQueue
+
+			if (lives_counter >= 10)
+				HUD.drawSmallDigit(u16((lives_counter / 10) % 10), px + 0x20, py + 8, renderQueue)
+			HUD.drawSmallDigit(u16(lives_counter % 10), px + 0x28, py + 8, renderQueue)
+		}
+	}
+	else
+#endif
+	{
+		D4 = (isBonusStage) ? 8 : 0
+
+		if ((level.framecounter & 0x08) == 0)
+		{
+			if (ring_counter == 0)
+			{
+				D4 += 2		// Set rings HUD text to flicker
+			}
+			if (timer.minutes == 9 && !isBonusStage)
+			{
+				D4 += 4		// Set timer HUD text to flicker
+			}
+		}
+
+		// Targets:
+		//  - 0x00dbc2	-> D4.u16 = 0x00		// Complete HUD text
+		//  - 0x00dc00	-> D4.u16 = 0x02		// HUD with rings text flickering
+		//  - 0x00dc32	-> D4.u16 = 0x04		// HUD with time text flickering
+		//  - 0x00dc6a	-> D4.u16 = 0x06		// HUD with both rings and time flickering
+		//  - 0x00dc96	-> D4.u16 = 0x08		// Bonus stage HUD
+		//  - 0x00dcb6	-> D4.u16 = 0x0a		// Bonus stage HUD with rings text flickering
+		A1 = tableLookupAddress(0x00dbb6, D4.u16)
+
+		D4.s16 = u16[A1] - 1
+		D0.s16 = baseX + 0x80
+		D1.u16 = 0x0108
+		D5.u16 = 0x86ca
+		A1 += 2
+		if (D4.s16 >= 0)
+		{
+			writeToSpriteTable(renderQueue)
+		}
+	}
+
+	// Because we want to disable the normal HUD, return true
+	return true
+}
+
+//@ Original function taken from sonic3air_dev/scripts/objects/basics/monitor.lemon
+function u64 ExtraChar.getIconSpriteKey_char3(u8 type)
+{
+	if (type == 0x01)
+		return "monitor_icon_amy"
+	else if (type == 0x02 && Renderer.hasCustomSprite("eggman-lrz-blue-12") && System.getGlobalVariableValueByName("EggmanBlue.disableMonitorReplacement") != 1)
+		return "monitor_icon_eggman"
+	else if (type == 0x04 && !Amy_Speed_Shoes)
+		return "monitor_amy_shoe"
+	else
+		return base.ExtraChar.getIconSpriteKey_char3(type)
+
+	return 0x00
+}
+
+global bool Amy_Rotate
+//@ Original function taken from sonic3air_dev/scripts/standalone/rendering/render_character.lemon
+function void ExtraChar.drawCharacterSprite_char3()
+{
+	u64 key = pop()
+	bool asSmallGhost = pop()
+	s16 py = s16(pop())
+	s16 px = s16(pop())
+	u8 variant = pop()
+	u8 character = pop()
+	
+	bool isPlayer1 = (variant == 0)
+	u32 characterAddress = isPlayer1 ? 0xffffb000 : 0xffffb04a
+
+	u8 Smooth_ctrl = (Amy_Rotate) ? 2 : 1
+
+	// Check only needed for Tails' tails
+	if (variant == 2)
+	{
+		// No smooth rotation in Slot Machine
+		if (global.zone == 0x15)
+		{
+			push(false)
+			return
+		}
+		
+		characterAddress = 0xffff0000 + u16[A0 + 0x30]
+
+		// Do not render when blinking after hit
+		if (u8[characterAddress + 0x34] != 0 && ((u8[characterAddress + 0x34] + 1) & 0x04) == 0)
+		{
+			// Prevent emulator-like rendering
+			push(true)
+			return
+		}
+
+		// Do not render when Tails looks into the background (e.g. LBZ 2 end cutscene) and in DEZ gravity transporters
+		if (u8[characterAddress + 0x22] >= 0x55 && u8[characterAddress + 0x22] <= 0x5b)
+		{
+			// Prevent emulator-like rendering
+			push(true)
+			return
+		}
+
+		isPlayer1 = (characterAddress == 0xffffb000)
+		character = CHARACTER_TAILS
+	}
+
+	if (level.vertical_wrap == 0xff00)
+	{
+		// For vertically wrapping levels, "normalize" py into interval [-move_area.bottom.target * 3/4, -move_area.bottom.target * 1/4]
+		py &= level.height.bitmask
+		if (py > move_area.bottom.target * 3/4 && move_area.bottom.target >= 0xe0)	// move_area.bottom.target is very low in DEZ boss act
+			py -= move_area.bottom.target
+	}
+
+	u8 animationSprite = char.animation.sprite
+	u16 animationSpriteEx = Standalone.getModdedAnimationSpriteEx(character, animationSprite)
+	u8 flags = (char.render_flags & (SPRITE_FLAG_FLIP_X | SPRITE_FLAG_FLIP_Y))
+	u8 angle = 0
+	key = Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)		// First ask modded scripts
+	u8 rotationMode = 0
+
+	if (variant < 2)
+	{
+		// if (character == CHARACTER_SONIC && animationSpriteEx == animationSprite)	// Last check is only false if modded scripts made their own changes
+		// {
+		// 	// Special handling for Drop Dash & Super Peel-Out
+		// 	if (char.state == char.state.SONIC_DROPDASH)
+		// 	{
+		// 		animationSpriteEx = CHAR_ANIMSPRITE_SONIC_DROPDASH + ((level.framecounter >> 1) & 0x01)
+		// 	}
+		// 	else if (!super.active && animationSprite >= 0x21 && animationSprite <= 0x30)
+		// 	{
+		// 		if (sonic.fastrunanim.timer > 0)
+		// 		{
+		// 			animationSpriteEx = CHAR_ANIMSPRITE_SONIC_PEELOUT + (level.framecounter & 0x03)
+
+		// 			if (!Game.getSetting(SETTING_SMOOTH_ROTATION))
+		// 			{
+		// 				angle = (animationSprite - 0x21) / 4 * 0xe0
+		// 				if ((char.flags & char.flag.FACING_LEFT) == (global.inv_gravity == 0))
+		// 					angle = -angle
+		// 				animationSprite = 0x21 + (animationSprite - 0x21) % 4
+		// 			}
+		// 		}
+		// 	}
+		// }
+
+		if (Game.getSetting(SETTING_SMOOTH_ROTATION))
+		{
+			// Character
+			if (animationSprite >= 0x01 && animationSprite <= 0x20)
+			{
+				// Walking animation
+				animationSprite = 0x01 + (animationSprite - 0x01) % 8
+				rotationMode = Smooth_ctrl
+			}
+			else if (animationSprite >= 0x21 && animationSprite <= 0x30)
+			{
+				// Running animation
+				// Save untill we have a fast run animation
+				animationSprite = ((useAmyDashAnim && Game.getSetting(SETTING_SUPERFAST_RUNANIM)) ? AMY_DASH_ANIM_FRAME_FIRST : 0x21) + (animationSprite - 0x21) % 4
+				rotationMode = Smooth_ctrl
+				// animationSprite = 0x21 + (animationSprite - 0x21) % 4
+				// rotationMode = Smooth_ctrl
+			}
+			else if (animationSprite >= 0x78 && animationSprite <= 0x7f)
+			{
+				// Swinging animation
+				animationSprite = 0x78
+				rotationMode = 2
+			}
+			else if (animationSprite >= AMY_DASH_ANIM_FRAME_FIRST && animationSprite <= AMY_DASH_ANIM_FRAME_LAST)
+			{
+				rotationMode = 2
+			}
+
+			// else if (character == CHARACTER_TAILS && animationSprite >= 0xc3 && animationSprite <= 0xca)
+			// {
+			// 	// Tails' fastest run animation
+			// 	animationSprite = 0xc3 + (animationSprite - 0xc3) % 2
+			// 	rotationMode = Smooth_ctrl
+			// }
+			else if (character == CHARACTER_KNUCKLES && animationSprite == 0xc0)
+			{
+				// Only for DDZ
+				rotationMode = 1
+			}
+
+			if (rotationMode != 0)
+			{
+			#if GAMEAPP >= 0x23032500
+				bool useVanillaS3AIRRotation = true
+				if (Game.getSetting(SETTING_SMOOTH_ROTATION) == 2)
+				{
+					useVanillaS3AIRRotation = (char.flags & char.flag.IN_AIR || global.zone == 0x0c)	// Use in-air rotation in DDZ
+				}
+
+				if (useVanillaS3AIRRotation)
+			#endif
+				{
+					s8 oldRotation = isPlayer1 ? oldRotationPlayer1 : oldRotationPlayer2
+					flags = char.flags & char.flag.FACING_LEFT		// This really has to be "char.flags", not "char.render_flags"
+
+					angle = char.rotation
+					if (rotationMode == 1)
+					{
+						if (abs(s8(char.rotation)) <= 0x10 && abs(oldRotation) <= 0x10)
+						{
+							angle = 0
+						}
+
+						if (angle != char.rotation)
+						{
+							s8 diff = angle - oldRotation
+							angle = oldRotation + clamp(diff, -3, 3)
+						}
+					}	
+				}
+			#if GAMEAPP >= 0x23032500
+				else
+				{
+					// Mania-accurate rotation #contributed by Elsie The Pict
+					u8 oldRotation = isPlayer1 ? oldRotationPlayer1 : oldRotationPlayer2
+					flags = char.flags & char.flag.FACING_LEFT		// This really has to be "char.flags", not "char.render_flags"
+
+					angle = char.rotation
+					if (rotationMode == 1)
+					{
+						
+						if (char.rotation <= 0x04 || char.rotation >= 0xfc)
+							oldRotation = 0
+						else
+						{
+							u32 targetRotation = 0
+							if (char.rotation > 0x10 && char.rotation < 0xe8)
+								targetRotation = char.rotation
+								
+							u32 rotate = targetRotation - oldRotation
+							u32 shift = (abs(char.groundspeed) <= 0x6000) + 1
+							
+							if (abs(rotate) >= abs(rotate - 0x100))
+							{
+								if (abs(rotate - 0x200) < abs(rotate + 0x100))
+									oldRotation += (rotate - 0x100) >> shift
+								else
+									oldRotation += (rotate + 0x100) >> shift
+							}
+							else
+							{
+								if (abs(rotate) < abs(rotate + 0x100))
+									oldRotation += rotate >> shift
+								else
+									oldRotation += (rotate + 0x100) >> shift
+							}
+						}
+						
+						angle = oldRotation
+						angle &= 0xFF
+					}
+				}
+			#endif
+			}
+
+			if (isPlayer1)
+				oldRotationPlayer1 = angle
+			else
+				oldRotationPlayer2 = angle
+		}
+		else
+		{
+			//WALK
+			if (animationSprite >= 0x01 && animationSprite <= 0x20)
+			{
+				angle = (animationSprite - 0x01) / 8 * 0xe0 * ((global.inv_gravity) ? -1 : 1)
+				if (char.flags & char.flag.FACING_LEFT)
+					angle = -angle
+				animationSprite = 0x01 + (animationSprite - 0x01) % 8
+			}
+			//RUN
+			else if (animationSprite >= 0x21 && animationSprite <= 0x30)
+			{
+				angle = (animationSprite - 0x21) / 4 * 0xe0 * ((global.inv_gravity) ? -1 : 1)
+				if (char.flags & char.flag.FACING_LEFT)
+					angle = -angle
+				// Save untill we have a fast run animation
+				animationSprite = ((useAmyDashAnim && Game.getSetting(SETTING_SUPERFAST_RUNANIM)) ? AMY_DASH_ANIM_FRAME_FIRST : 0x21) + (animationSprite - 0x21) % 4
+				// animationSprite = 0x21 + (animationSprite - 0x21) % 4
+			}
+			//Hanging in AIZ
+			else if (animationSprite >= 0x78 && animationSprite <= 0x7f)
+			{
+				angle = (animationSprite - 0x78) * 0xe0 * ((global.inv_gravity) ? -1 : 1)
+				if (char.flags & char.flag.FACING_LEFT)
+					angle = -angle
+				animationSprite = 0x78
+			}
+			//Hanging in MHZ
+			else if (animationSprite >= 0xeb && animationSprite <= 0xee)
+			{
+				angle = (animationSprite - 0xeb) * 0xe0 * ((global.inv_gravity) ? -1 : 1)
+				if (char.flags & char.flag.FACING_LEFT)
+					angle = -angle
+				animationSprite = 0xeb
+			}
+		}
+
+		//During the sequence when she's falling from space
+		if (objA0.state == char.state.RUNNING && (animationSprite >= 0x21 && animationSprite <= 0x30) && global.zone == 0x0d && Game.getSetting(SETTING_SUPERFAST_RUNANIM))
+			animationSprite = AMY_DASH_ANIM_FRAME_FIRST + (animationSprite - 0x21) % 4
+
+		// if (key == 0 && animationSpriteEx >= 0x100)
+		// {
+		// 	// Special handling for Drop Dash & Super Peel-Out
+		// 	if (animationSpriteEx >= CHAR_ANIMSPRITE_SONIC_PEELOUT)
+		// 	{
+		// 		key = stringformat("sonic_peelout_%d", animationSpriteEx - CHAR_ANIMSPRITE_SONIC_PEELOUT)
+		// 	}
+		// 	else
+		// 	{
+		// 		key = stringformat("sonic_dropdash_%d", animationSpriteEx - CHAR_ANIMSPRITE_SONIC_DROPDASH)
+		// 	}
+		// }
+		if (isPlayer1)
+			timeattack.animSpriteEx = animationSpriteEx
+
+		if (key == 0)
+		{
+			key = stringformat("character_amy_0x%02x", animationSprite)
+
+			if (!Renderer.hasCustomSprite(key))
+			{
+				u32 sourceBase    = (character == CHARACTER_SONIC) ? ((animationSprite >= 0xda) ? 0x140060 : 0x100000) : (character == CHARACTER_TAILS) ? ((animationSprite >= 0xd1) ? 0x143d00 : 0x3200e0) : 0x1200e0
+				u32 tableAddress  = (character == CHARACTER_SONIC) ? (super.active ? 0x148378 : 0x148182) : (character == CHARACTER_TAILS) ? 0x14a08a : 0x14bd0a
+				u32 mappingOffset = (character == CHARACTER_SONIC) ? (super.active ? 0x146816 : 0x146620) : (character == CHARACTER_TAILS) ? 0x148eb8 : 0x14a8d6		// Not really necessary here, we could also use "char.mapping_offset"
+
+				key = Renderer.setupCustomCharacterSprite(sourceBase, tableAddress, mappingOffset, animationSprite, 0x00)
+			}
+		}
+	}
+
+	if (char.state == 0x31)
+	{
+		if (char.animation.timer > 8)
+		{
+			char.animation.timer = 8
+		}
+		if (char.animation.timer == 0)
+		{
+			char.animation.timer = 8
+			++char.animation.frame
+		}
+		if (char.velocity.y >= 0)
+		{
+			char.state = char.state.RUNNING
+			char.animation.frame = 0
+		}
+		if (char.animation.frame >= 5)
+		{
+			char.animation.frame = 0
+		}
+		key = stringformat("ESamy_springtwirl_%d", char.animation.frame)
+		if (char.animation.timer > 6)
+		{
+			char.animation.timer = 6
+		}
+	}
+
+	// animation fix for SSZ
+	if ((objA0.animation.sprite == 0xe5 || objA0.animation.sprite == 0xe9) && global.zone_act == 0x0a00)
+		py += 3
+
+	u16 renderQueue = 0xa000 - char.sprite_priority
+	// u8 atex = (char.sprite_attributes >> 9) & 0x30
+	// if (EXTENDED_CHARACTER_PALETTES)
+	u8 atex = 0x40 + character * 0x20
+
+	if (char.sprite_attributes & sprite_attribute.PRIORITY)
+		flags |= SPRITE_FLAG_PRIO
+
+	if (rotationMode != 0 && global.inv_gravity)
+	{
+		// Correction for inverse gravity
+		angle = 128 - angle
+		flags ^= SPRITE_FLAG_FLIP_X
+	}
+	
+	// Render character
+	if (asSmallGhost)
+	{
+		Renderer.drawCustomSprite(key, px, py, atex, flags | SPRITE_FLAG_PRIO, 0xa800, angle, 0xc0ffffff, 0x8000)
+	}
+	else
+	{
+		Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue, angle, 255)
+	}
+
+	bool useAfterImages
+	if (isPlayer1)
+	{
+		if (((super.active == 0xff) || (super.active.tails == 0xff))) || ((char.double_jump_state != 0) && (char.state == char.state.ROLLING) && (AmyPalette == 4) && !IsAmyUsingShield)
+		{
+			useAfterImages = true
+		}
+		else
+		{
+			if (Game.getSetting(SETTING_SPEEDUP_AFTERIMGS))
+			{
+				useAfterImages = ((u8[characterAddress + 0x2b] & char.bonus.SPEED_UP) != 0)
+			}
+		}
+	}
+
+	if (useAfterImages)
+	{
+		if ((char.double_jump_state != 0) && (char.state == char.state.ROLLING) && (AmyPalette == 4))
+		{
+			// Additional offset for Sonic charging a Super Peel-Out (either Hyper Sonic or with Speed Shoes)
+			s16 afterImagesOffsetX = 0
+
+			for (s8 i = 2; i > 0; --i)
+			{
+				A1 = 0xffffe500 + u8(posbackup.offset.player1 - (i * 16 + 8))
+				s16 px0 = u16[A1] - camera.foreground.x.u16 + (i * afterImagesOffsetX / 4)
+				s16 py0 = u16[A1+2] - camera.foreground.y.u16
+				if (level.vertical_wrap == 0xff00)	// Consider vertical level wrap
+					py0 &= level.height.bitmask
+
+				Renderer.setSpriteTagWithPosition(characterAddress + 0x10 + i, px0, py0)
+
+				if (level.framecounter % 2 == i-1) // Thanks Lemons
+				{
+					Renderer.setSpriteTagWithPosition(characterAddress + 0x10 + i, px0, py0)
+
+					Renderer.drawCustomSprite(key, px0, py0, atex, flags, renderQueue - i, angle, 0x866666ff, 0xffff)
+				}
+			}
+		}
+		else
+		{
+			// Additional offset for Sonic charging a Super Peel-Out (either Hyper Sonic or with Speed Shoes)
+			s16 afterImagesOffsetX = 0
+			if (char.character == CHARACTER_SONIC && char.spindash == 0x80)
+			{
+				afterImagesOffsetX = (char.groundspeed >> 7) * ((char.flags & char.flag.FACING_LEFT) ? 1 : -1)
+			}
+
+			for (s8 i = 3; i > 0; --i)
+			{
+				A1 = 0xffffe500 + u8(posbackup.offset.player1 - (i * 8 + 4))
+				s16 px0 = u16[A1] - camera.foreground.x.u16 + (i * afterImagesOffsetX / 4)
+				s16 py0 = u16[A1+2] - camera.foreground.y.u16
+				if (level.vertical_wrap == 0xff00)	// Consider vertical level wrap
+					py0 &= level.height.bitmask
+				
+				Renderer.drawCustomSprite(key, px0, py0, atex, flags, renderQueue - i, angle, 192 - i * 32)
+			}
+		}
+	}
+
+	// Prevent emulator-like rendering
+	push(true)
+	return
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
+function void ExtraChar.updateGroundMoves_char3()
+{
+	return
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
+function bool ExtraChar.updateNormalState_char3()
+{
+	// Do nothing, and run the normal, normal state update
+	if (A0 == 0xffffb000)
+	{
+		if (updateDebugModeInput(false))
+			return false
+	}
+
+	if (A0 == 0xffffb000)
+	{
+		// Tails is the main player
+		if (player1.control_override == 0)
+		{
+			control.tails = control.pad1
+			control.player1 = control.pad1
+			if (tails.ai_routine >= 0x1a && competition_mode.active == 0)
+			{
+				Character.TailsAI.Update()
+			}
+		}
+		else
+		{
+			control.tails = control.player1
+		}
+	}
+	else
+	{
+		// Tails is the second player
+		if (player2.control_override == 0)
+		{
+			control.tails = control.pad2
+		}
+
+		if (player2.control_override >= 0 && competition_mode.active == 0)
+		{
+			Character.TailsAI.Update()
+		}
+	}
+
+	if (char.control_flags & 0x01)
+	{
+		// Character is not directly controllable (but may be indirectly via an object, like when hanging on a pole or similar)
+		char.double_jump_state = 0
+		Tails.CheckDropSonic()
+	}
+	else
+	{
+		// Call update function depending on flags
+		pushA456()
+		// Targets:
+		//  - 0x014748	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = 0x00												-> Character.UpdateTailsUprightOnGround()
+		//  - 0x0147b8	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = char.flag.IN_AIR									-> Character.UpdateTailsUprightInAir()
+		//  - 0x014934	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = char.flag.ROLLING								-> Character.UpdateTailsRollingOnGround()
+		//  - 0x0149a2	-> (char.flags & (char.flag.IN_AIR | char.flag.ROLLING)) = (char.flag.IN_AIR | char.flag.ROLLING)			-> Character.UpdateTailsRollingInAir()
+		call tableLookupAddress(0x0138f6, char.flags & (char.flag.IN_AIR | char.flag.ROLLING))
+		popA456()
+	}
+
+	if (level.vertical_wrap == 0xff00)
+	{
+		char.position.y.u16 &= level.height.bitmask
+	}
+
+	Character.updateBonusEffects()
+	Character.UpdateRingsInSuperForm()
+	Character.WriteToPositionBackup()
+	Character.checkForWaterSurface()
+
+	char.angle_sensor_1 = u8[0xfffff768]
+	char.angle_sensor_2 = u8[0xfffff76a]
+
+	if (u8[0xfffff7c9] != 0)
+	{
+		if (char.state == char.state.RUNNING)
+			char.state = char.state.former
+	}
+
+	if ((char.control_flags & 0x02) == 0)	// Hanging flag
+	{
+		UpdateTailsAnimation()
+		if (global.inv_gravity)
+		{
+			char.render_flags ^= render_flag.FLIP_Y
+		}
+		UpdateTailsSpritePatterns()
+	}
+
+	if ((char.control_flags & 0xa0) == 0)
+	{
+		Character.CheckCollisionsWithDynamicObjects()
+	}
+	return true
+}
+
+//@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
+function void ExtraChar.onCollisionWithDynamicObject_char3()
+{
+	// Example values for u8[A1 + 0x28]:
+	//  - 0x06, 0x0b, 0x17, 0x1a = Different types of enemies
+	//  - 0x0f		 = Boss enemy
+	//  - 0x18		 = Extended arm of DEZ Chainspike
+	//  - 0x23		 = AIZ Bloominator
+	//  - 0x46		 = Monitor
+	//  - 0x47		 = Dynamic ring
+	//  - 0x87		 = Extended arm of SOZ Skorp
+	//  - 0x8b, 0x9c = Flames, damaging parts of enemies
+	//  - 0x8f		 = Wrecking ball
+	//  - 0x98, 0x9b = Projectile
+	//  - 0xd8		 = Thrown mushroom, stars over starpost
+
+	D1.u8 = u8[A1 + 0x28] & 0xc0
+	if (D1.u8 == 0)
+	{
+		// Collision is an enemy, i.e. is harmful, but can be attacked
+		bool attacking = false
+		if (char.bonus_effect & char.bonus.INVINCIBLE)
+		{
+			attacking = true
+		}
+		else if (char.state == char.state.ROLLING || char.state == char.state.SPINDASH)
+		{
+			attacking = true
+		}
+	#if STANDALONE
+		else if (Game.getSetting(SETTING_DROPDASH) && char.character == CHARACTER_SONIC && char.state == char.state.SONIC_DROPDASH)
+		{
+			attacking = true
+		}
+	#endif
+
+		if (!attacking || (tails.carrying && !super.active.tails)) // last little bit here is so that Amy doesn't hurt Eggman while shes hanging onto the balloon, when she's not super
+		{
+			// The balloon shouldn't hurt anyone
+			bool isThreat = true
+			// if (char.character == CHARACTER_KNUCKLES)
+			// {
+			// 	isThreat = (char.double_jump_state != 1 && char.double_jump_state != 3)
+			// }
+			// else if (char.character == CHARACTER_SONIC || char.double_jump_state == 0 || (char.flags & char.flag.UNDERWATER))
+			// {
+			// 	isThreat = true
+			// }
+			// else
+			// {
+			// 	s16 dx = char.position.x.u16 - objA1.position.x.u16
+			// 	s16 dy = char.position.y.u16 - objA1.position.y.u16
+			// 	D0.u8 = lookupAngleByVector(dx, dy) - 0x20
+			// 	isThreat = (D0.u8 >= 0x40)
+			// }
+
+			if (isThreat)
+			{
+				Character.OnThreatCollision()
+				return
+			}
+		}
+
+		if (u8[A1 + 0x29] != 0)
+		{
+			char.velocity.x = -char.velocity.x
+			char.velocity.y = -char.velocity.y
+			char.groundspeed = -char.groundspeed
+			u8[A1 + 0x1c] = A0.u8
+			u8[A1 + 0x25] = u8[A1 + 0x28]
+			u8[A1 + 0x28] = 0
+			--u8[A1 + 0x29]
+			if (u8[A1 + 0x29] == 0)
+			{
+				u8[A1 + 0x2a] |= 0x80
+			}
+
+			if (char.character == CHARACTER_KNUCKLES)
+			{
+				if (char.double_jump_state == 1)
+				{
+					char.double_jump_state = 2
+					char.state = char.state.KNUX_FALLING
+
+					if (char.velocity.x >= 0)
+						char.flags |= char.flag.FACING_LEFT
+					else
+						char.flags &= ~char.flag.FACING_LEFT
+
+					char.hitbox_extends.x = char.hitbox.default.x
+					char.hitbox_extends.y = char.hitbox.default.y
+				}
+			}
+		}
+		else
+		{
+			if (u8[A1 + 0x2a] & 0x04)
+			{
+				A2 = 0xffff0000 + u16[A1 + 0x3c]
+				u8[A2] &= ~(1 << u8[A1 + 0x3b])
+			}
+
+			u8[A1 + 0x2a] |= 0x80
+
+			ExtraChar.amySpawnKissHeart()
+
+			// Grant bonus points
+			Enemy.addScore(A1, 0x010216)
+
+			objA1.update_address = 0x01e5e0
+			u8[A1 + 0x05] = 0
+			if (char.velocity.y < 0)
+			{
+				char.velocity.y += 0x100
+			}
+			else if (char.position.y.u16 >= objA1.position.y.u16)
+			{
+				char.velocity.y -= 0x100
+			}
+			else
+			{
+				char.velocity.y = -char.velocity.y
+			}
+		}
+	}
+	else if (D1.u8 == 0x40)
+	{
+		D0.u8 = u8[A1 + 0x28] & 0x3f
+		if (D0.u8 != 0x06)
+		{
+			// Collect ring, but only after 30 invulnerability frames
+			//  -> Remember that the "char.invuln.countdown" timer starts at 120
+			u8 timer = competition_mode.active ? char.invuln.countdown : u8[0xffffb034]
+			if (timer < 90)
+			{
+				u8[A1 + 0x05] = 0x04
+			}
+		}
+		else
+		{
+			// This part seems to be for monitors specifically
+			s16 vy = (global.inv_gravity) ? -char.velocity.y : char.velocity.y
+			bool movingUp = (objA1.render_flags & render_flag.FLIP_Y) ? (vy > 0) : (vy < 0)
+			if (movingUp)
+			{
+				if (u8[A1 + 0x2a] & char.flag.IN_AIR)
+				{
+					if ((objA1.render_flags & render_flag.FLIP_Y) == 0)
+					{
+						if (char.position.y.u16 - 0x10 < objA1.position.y.u16)
+							return
+					}
+					else
+					{
+						if (char.position.y.u16 + 0x10 >= objA1.position.y.u16)
+							return
+					}
+
+					char.velocity.y = -char.velocity.y
+					objA1.velocity.y = -0x180
+					if (u8[A1 + 0x3c] == 0)
+						u8[A1 + 0x3c] = 4
+
+					return
+				}
+				else
+				{
+				#if STANDALONE
+					if (u8[A1 + 0x2a] & char.flag.PUSHING)
+					{
+						// In S3AIR, do not allow S&K's monitor opening from the side
+						//  -> This is done to be more consistent with other Sonic games, incl. Sonic 1, 2, CD, Mania and even Sonic 3 alone
+						return
+					}
+					// TODO: Unfinished code here -- it works, but the falling monitor can crush the player, and is this really what we want?
+				/*
+					else
+					{
+						// Hit monitor from below, make it fall
+						u8[A1 + 0x3c] = 1
+
+						char.velocity.y = -char.velocity.y
+						objA1.velocity.y = -0x180
+						if (u8[A1 + 0x3c] == 0)
+							u8[A1 + 0x3c] = 4
+						return
+					}
+				*/
+				#endif
+				}
+			}
+
+			if (A0 != 0xffffb000 && competition_mode.active == 0)
+			{
+				// Sorry player 2, you can't open monitors in normal game
+				return
+			}
+
+			bool canOpenMonitor = false
+			if (char.state == char.state.ROLLING)
+			{
+				canOpenMonitor = true
+			}
+		#if STANDALONE
+			else if (Game.getSetting(SETTING_DROPDASH) && char.character == CHARACTER_SONIC && char.state == char.state.SONIC_DROPDASH)
+			{
+				canOpenMonitor = true
+			}
+		#endif
+			else if (char.character == CHARACTER_KNUCKLES)
+			{
+				canOpenMonitor = (char.double_jump_state == 1 || char.double_jump_state == 3)
+			}
+
+			if (canOpenMonitor)
+			{
+				// Bounce off
+				char.velocity.y = -char.velocity.y
+				u8[A1 + 0x05] = 4
+				u16[A1 + 0x42] = A0.u16
+			}
+		}
+	}
+	else if (D1.u8 == 0x80)
+	{
+		if (AmyHammerDeflect() && (char.state == char.state.ROLLING && char.double_jump_state == 1))
+		{
+			deflectProjectile()
+			playSound(0xb5)
+		}
+		else
+		{
+			// We don't want the value to get set when Amy can't get hurt
+			if (!super.active && (char.bonus_effect & char.bonus.INVINCIBLE) == 0 && u8[A0 + 0x34] == 0)
+			{
+				if (!(objA1.flags2b & char.bonus.SHIELD_LIGHTNING) && !(objA1.flags2b & char.bonus.SHIELD_FIRE) && !(u8[A1 + 0x2b] & char.bonus.DEFLECTABLE)) // Makes sure the dust can still appear if Amy has an elemental shield
+					AmyDustControl = 1 // used to disable dust when colliding with a harmful object.
+			}
+			if (AmyBreakObjects())
+				return
+			// Harmful object
+			Character.OnThreatCollision()
+		}
+	}
+	else  // D1.u8 == 0xc0
+	{
+		// Other interactable object
+		fn0103ba()
+	}
+}
+
+function bool AmyBreakObjects()
+{
+	// Big Ice spikes
+	if (objA1.update_address == 0x085140 && objA1.subtype2c == 0)
+	{
+		if (char.state == char.state.ROLLING && char.double_jump_state == 1)
+		{
+			playSound(0x80)
+			
+			A2 = A1
+			AmyIceBreaker()
+			A1 = A2
+			
+			UnloadObjectA1()
+			
+			return true
+		}
+	}
+	return base.AmyBreakObjects()
+}
+
+function void AmyIceBreaker()
+{
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x00
+		objA1.position.x.u16 = u16[A2 + 0x10] - 12
+		objA1.position.y.u16 = u16[A2 + 0x14] - 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x02
+		objA1.position.x.u16 = u16[A2 + 0x10] - 4
+		objA1.position.y.u16 = u16[A2 + 0x14] - 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x04
+		objA1.position.x.u16 = u16[A2 + 0x10] + 4
+		objA1.position.y.u16 = u16[A2 + 0x14] - 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x06
+		objA1.position.x.u16 = u16[A2 + 0x10] + 12
+		objA1.position.y.u16 = u16[A2 + 0x14] - 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x08
+		objA1.position.x.u16 = u16[A2 + 0x10] - 12
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x0a
+		objA1.position.x.u16 = u16[A2 + 0x10] - 4
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x0c
+		objA1.position.x.u16 = u16[A2 + 0x10] + 4
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x0e
+		objA1.position.x.u16 = u16[A2 + 0x10] + 12
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x10
+		objA1.position.x.u16 = u16[A2 + 0x10] - 12
+		objA1.position.y.u16 = u16[A2 + 0x14] + 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x12
+		objA1.position.x.u16 = u16[A2 + 0x10] - 4
+		objA1.position.y.u16 = u16[A2 + 0x14] + 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x14
+		objA1.position.x.u16 = u16[A2 + 0x10] + 4
+		objA1.position.y.u16 = u16[A2 + 0x14] + 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x16
+		objA1.position.x.u16 = u16[A2 + 0x10] + 12
+		objA1.position.y.u16 = u16[A2 + 0x14] + 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+}
+
+// If you want to implement any custom objects that Amy should deflect
+function bool AmyHammerDeflect()
+{
+	if (objA1.update_address == 0x034518) // Relief arrows
+		return true
+	else if (objA1.update_address == 0x075b34) // Hey Ho's logs
+	{
+		objA1.value3a = 0 // no more bouncing logs, hopefully // yeah it works cloud - haz
+		return true
+	}
+
+	return base.AmyHammerDeflect()
+}
+
+// fix for log wrapping vertically
+//# address-hook(0x075b34) end(0x075b5e)
+function void fn075b34()
+{
+	bool outOfVerticalBounds = (objA0.position.y.u16 < camera.position.y.u16 - 0x20) || (objA0.position.y.u16 > camera.position.y.u16 + getScreenHeight() + 0x20)
+	if (outOfVerticalBounds)
+		UnloadObject()
+		
+	base.fn075b34()
+}
+
+function void ExtraChar.onThreatCollision_char3()
+{
+	// Check for shield or invincibility
+	D0.u8 = char.bonus_effect & 0x73
+	if (D0.u8 != 0)
+	{
+		D0.u8 &= u8[A1 + 0x2b]
+		if (D0.u8 != 0)
+		{
+			D0 = 0xffffffff
+			return
+		}
+
+		if ((char.bonus_effect & char.bonus.ANY_SHIELD) == 0)
+		{
+			if ((char.bonus_effect & char.bonus.INVINCIBLE) == 0)
+			{
+				Character.OnThreatCollisionInner()
+			}
+			D0 = 0xffffffff
+			return
+		}
+	}
+	else
+	{
+		// Sonic can deflect projectiles during active Insta-shield, Knuckles while gliding, and Tails sometimes during flight
+		bool canDeflect = (char.double_jump_state != 0)
+	// #if STANDALONE
+	// 	// Different approach for Tails: Deflect only projectiles that are above him, and only if flying
+	// 	if (char.character == CHARACTER_TAILS)
+	// 	{
+	// 		canDeflect = char.double_jump_state != 0
+	// 	}
+	// #endif
+		if (!canDeflect)
+		{
+			Character.OnThreatCollisionInner()
+			return
+		}
+	}
+
+	if ((u8[A1 + 0x2b] & 0x08) == 0)
+	{
+		if ((char.bonus_effect & char.bonus.INVINCIBLE) == 0)
+		{
+			Character.OnThreatCollisionInner()
+		}
+	}
+	else
+	{
+		deflectProjectile()
+
+		if char.double_jump_state != 0
+			playSound(0xb5)
+	}
+	D0 = 0xffffffff
+}
+
+function bool ExtraChar.checkStartJump_char3()
+{
+	u8 input_pressed = (char.character == CHARACTER_TAILS) ? control.tails.pressed : control.player1.pressed
+	if ((input_pressed & CONTROL_ABC) == 0)
+		return false
+
+	D0 = char.rotation
+	if (global.inv_gravity)
+	{
+		D0.s8 = -D0.s8
+	}
+	else
+	{
+		D0.s8 += 0x80
+	}
+
+	pushA456()
+	fn00f72e()
+	popA456()
+
+	if (D1.s16 < 6)
+		return false
+
+	// Get jump acceleration depending on character
+	u16 acceleration
+	if (char.character != CHARACTER_KNUCKLES || competition_mode.active)
+	{
+		if (char.flags & char.flag.UNDERWATER)
+		{
+			acceleration = 0x380
+		}
+		else if (super.active && char.character == CHARACTER_SONIC)
+		{
+			acceleration = 0x800
+		}
+		else
+		{
+			acceleration = 0x680
+		}
+	}
+	else
+	{
+		if (char.flags & char.flag.UNDERWATER)
+		{
+			acceleration = 0x300
+		}
+		else
+		{
+			acceleration = 0x600
+		}
+	}
+
+	u8 angle = char.rotation - 0x40
+	s32 accel_x = (s32(lookupCos(angle)) * acceleration) >> 8
+	s32 accel_y = (s32(lookupSin(angle)) * acceleration) >> 8
+
+	char.velocity.x += accel_x
+	char.velocity.y += accel_y
+
+	char.flags |= char.flag.IN_AIR
+	char.flags &= ~char.flag.PUSHING
+
+	char.jumping = 1
+	char.on_convex_surface = 0
+	char.double_jump_state = 0
+
+	playSound(SFX_JUMP)
+
+	// Start roll jump
+	if (char.flags & char.flag.ROLLING)
+	{
+	#if STANDALONE
+		if (!Game.getSetting(SETTING_NO_CONTROL_LOCK))
+	#endif
+		{
+			char.hitbox_extends.x = char.hitbox.default.x
+			char.hitbox_extends.y = char.hitbox.default.y
+			char.flags |= char.flag.CONTROL_LOCK
+		}
+	}
+	else
+	{
+		char.hitbox_extends.x = 7
+		char.hitbox_extends.y = 14
+		char.flags |= char.flag.ROLLING
+		char.state = char.state.ROLLING
+
+		s8 dy = s8(char.hitbox_extends.y) - s8(char.hitbox.default.y)
+		char.position.y.u16 += global.inv_gravity ? dy : -dy
+
+	#if STANDALONE
+		// Glitch fix for Knuckles being unable to jump off underwater objects
+		//  -> Move him up a single pixel up so he won't stick to objects
+		// TODO: Does not work for the HCZ snake platforms
+		if (acceleration <= 0x300 && (char.flags & char.flag.ON_OBJECT))
+		{
+			--char.position.y.u16
+		}
+	#endif
+	}
+	return true
+}
+
+//# address-hook(0x01164e) end(0x0116dc)
+//# address-hook(0x014e78) end(0x014f06)
+//# address-hook(0x017680) end(0x01770e)
+function void Character.UpdateControlInAir()
+{
+	if (!competition_mode.active && (global.xtrachar != 3 || char.character != CHARACTER_TAILS || A0 != 0xffffb000) || (competition_mode.active && competition.xtrachar != 0x03))
+	{
+		base.Character.UpdateControlInAir()
+		return
+	}
+
+	u8 input_state = (char.character == CHARACTER_TAILS) ? control.tails.state : control.player1.state
+	s16 vx = char.velocity.x
+
+	// Direct control
+	if ((char.flags & char.flag.CONTROL_LOCK) == 0)
+	{
+		s16 maxSpeed = s16[A4]
+		s16 acceleration = s16[A4 + 2] * 2
+
+		if (input_state & CONTROL_LEFT)
+		{
+			if (char.double_jump_state == 0)
+				char.flags |= char.flag.FACING_LEFT
+
+			vx -= acceleration
+			if (vx <= -maxSpeed)
+			{
+				vx += acceleration
+				vx = min(vx, -maxSpeed)
+			}
+		}
+		if (input_state & CONTROL_RIGHT)
+		{
+			if (char.double_jump_state == 0)
+				char.flags &= ~char.flag.FACING_LEFT
+
+			vx += acceleration
+			if (vx >= maxSpeed)
+			{
+				vx -= acceleration
+				vx = max(vx, maxSpeed)
+			}
+		}
+	}
+
+	// Center camera y-offset again
+	centerCameraYOffset()
+
+	// Air drag
+	if (char.velocity.y < 0 && char.velocity.y >= -0x400)  // Not when falling or going up too fast
+	{
+		s16 drag = vx >> 5		// Do not divide here, as it rounds differently for negative numbers
+		if (drag != 0)
+		{
+			vx -= drag
+			if (drag > 0)
+				vx = max(vx, 0)
+			else
+				vx = min(vx, 0)
+		}
+	}
+
+	char.velocity.x = vx
+}
+
+//# address-hook(0x0147b8) end(0x014820)
+function void Character.UpdateTailsUprightInAir()
+{
+	if (global.xtrachar != 3 || A0 != 0xffffb000)
+	{
+		base.Character.UpdateTailsUprightInAir()
+		return
+	}
+	updateTailsInAir_shared()
+}
+
+//# address-hook(0x0160a6) end(0x01615e)
+function void TailsTails.Init()
+{
+	if (global.xtrachar != 3)
+	{
+		base.TailsTails.Init()
+		return
+	}
+	UnloadObject() // No Tails
+}
+
+function bool updateDebugModeInput(bool playingAsTails)
+{
+	if (global.xtrachar == 3)
+		playingAsTails = false
+	return base.updateDebugModeInput(playingAsTails)
+}
+
+//# address-hook(0x01365c) end(0x0136b8)
+function void Character.BaseUpdate.Tails()
+{
+//	System.writeDisplayLine(stringformat("char.animation.sprite = %x", char.animation.sprite))
+	if (global.xtrachar != 3)
+	{
+		base.Character.BaseUpdate.Tails()
+		return
+	}
+
+	Character.BaseUpdate.Amy()
+}
+
+// Ignore the setting for Super and Hyper Tails
+// Give Amy a Super and Hyper form
+function u32 Game.getSetting(u32 settingId)
+{
+	if (global.xtrachar == 3)
+	{
+		if (settingId == SETTING_HYPER_TAILS)
+			return 1
+		else if (settingId == SETTING_SUPER_PEELOUT)
+			return 0
+	}
+	return base.Game.getSetting(settingId)
+}
+
+//# address-hook(0x0136ca) end(0x0137c2)
+function void Character.Initialization.Tails()
+{
+	if (global.xtrachar != 3)
+	{
+		base.Character.Initialization.Tails()
+		return
+	}
+
+	IsAmyUsingShield = false
+
+	AmyDustControl = 0
+
+	PopTimer = 0
+
+	char.base_state += 2
+
+	char.character = CHARACTER_TAILS
+
+	u8 characterHeight = 15
+	char.hitbox_extends.x = 9
+	char.hitbox_extends.y = characterHeight
+	char.hitbox.default.x = 9
+	char.hitbox.default.y = characterHeight
+
+	char.mapping_offset = 0x148eb8
+
+	char.sprite_priority = 0x100
+	char.box_size.x = 0x18
+	char.box_size.y = 0x18
+	char.render_flags = render_flag.WORLD
+	// if (character == CHARACTER_TAILS)
+	char.render_flags |= render_flag.VISIBLE
+
+	setSpeedCapProperties(A4, false)
+
+	u8[A0 + 0x30] = 0
+	u8[A0 + 0x31] = 4
+	char.drown_countdown = 30
+
+	if (global.characters == CHARS_TAILS_ALONE)
+	{
+		if (checkpoint.number == 0)
+		{
+			char.sprite_attributes = (Char.Tails.targetInVRAM >> 5)
+			char.layer_flags1 = 0x0c
+			char.layer_flags2 = 0x0d
+
+			if (global.stage_type != 2)
+			{
+				checkpoint.x = char.position.x.u16
+				checkpoint.y = char.position.y.u16
+				checkpoint.sprite_attr = char.sprite_attributes
+				checkpoint.layer_flags = char.layer_flags
+			}
+		}
+	}
+	else
+	{
+		char.sprite_attributes = (Char.Tails.targetInVRAM >> 5) | (u16[0xffffb000 + 0x0a] & sprite_attribute.PRIORITY)
+		char.layer_flags = u16[0xffffb000 + 0x46]
+	}
+
+	if (A0 == 0xffffb000)
+		super.active.tails = 0
+
+	if (tails.ai_routine != 0x12 && tails.ai_routine != 0x20)
+		tails.ai_routine = 0
+
+	tails.control_counter = 0
+	tails.respawn_counter = 0
+
+	// Init Tails' tails object
+	u32[0xffffcc0a] = 0x0160a6
+	u16[0xffffcc0a + 0x30] = A0.u16
+
+	checkpoint.number.backup.tails = checkpoint.number
+
+}
+
+global u8 PopTimer
+
+// Blue glasses Eggman compatibility 
+function void EggmanBlue.decreaseTimer()
+{
+	base.EggmanBlue.decreaseTimer()
+}
+
+function void Character.BaseUpdate.Amy()
+{
+	EggmanBlue.decreaseTimer()
+	// Fix so that Debug mode works with Amy during the MGZ boss
+	A4 = 0xfffffec0		// Address of Tails' speed caps
+	A5 = 0xffffee2e		// Address of camera.yoffset.tails
+	A6 = 0xffffcc9e		// Base address of dust cloud object for Tails
+
+	// Check for debug mode
+	if (debug_mode.state == 0 || A0 != 0xffffb000)	// Maybe a check if it's second player Tails?
+	{
+		// Targets:
+		//  - 0x0136ca	-> char.base_state = 0x00	-> Character.Initialization.Tails()		-> Initialization
+		//  - 0x0137c4	-> char.base_state = 0x02	-> Character.UpdateNormalState.Tails()	-> In normal state
+		//  - 0x01569c	-> char.base_state = 0x04	-> Character.UpdateGotHurtState.Tails()	-> Tails just got hurt
+		//  - 0x01578e	-> char.base_state = 0x06	-> Character.UpdateDiedState.Tails()	-> Tails died
+		//  - 0x0157e0	-> char.base_state = 0x08	-> Character.UpdateRestartDelay()		-> Completely inactive after death
+		//  - 0x015810	-> char.base_state = 0x0c	-> Character.UpdateDrownedState.Tails()	-> Tails died by drowning
+		call tableLookupAddress(0x0136bc, char.base_state)
+	}
+	else if (updateDebugModeRegular())
+	{
+		UpdateTailsSpritePatterns()
+		DrawObject()
+	}
+	
+	if (A0 == 0xffffb000)
+	{
+		if (char.state == char.state.SPINDASH)
+			char.animation.sprite = (0x4B + char.animation.sprite)
+
+		// R.I.P.
+		// if ((char.animation.sprite <= 32 || char.animation.sprite == 0x90) && char.state == char.state.RUNNING) // 6 frame walk
+		// {
+		// 	// The first and last animation frames are skipped
+		// 	if (char.animation.frame == 1 || char.animation.frame == 8)
+		// 	{
+		// 		char.animation.frame = 2
+		// 		char.animation.sprite = (char.animation.sprite >= 25 && char.animation.sprite <= 32) ? 25 : (char.animation.sprite >= 17 && char.animation.sprite <= 24) ? 17 : (char.animation.sprite >= 9 && char.animation.sprite <= 16) ? 9 : 1
+		// 	}
+		// }
+
+		ExtraChar.amyHammerBounceHandler()
+	}
+	else
+	{
+		if (global.zone_act != 0x0201)
+		{
+			if (char.state == char.state.GOT_HURT)
+			{
+				PopTimer++
+				if (PopTimer >= 4)
+					UnloadObject()
+				else if (PopTimer == 1)
+					playSound(0x77)
+			}
+			else if (abs(char.groundspeed) > 0)
+			{
+				char.state = char.state.GOT_HURT
+			}
+		}
+	}
+}
+
+global bool Amy_HammerTrail
+
+function void ExtraChar.amyHammerBounceHandler()
+{
+	u8 PlayerInput = (A0 == 0xffffb000) ? control.player1.state : control.player2.state
+	if ((char.double_jump_state != 0) && (char.state == char.state.ROLLING) && !(PlayerInput & CONTROL_ABC)) || (char.state >= 0x20 && char.state < 0x29) 
+	{
+		char.double_jump_state = 0
+		char.jumping = 0
+		char.state = char.state.ROLLING
+	}
+
+	if (char.state != char.state.ROLLING)
+	{
+		char.double_jump_state = 0
+		char.jumping = 0
+	}
+
+	if ((char.double_jump_state != 0) && (char.state == char.state.ROLLING) && ((level.framecounter.low & 0x0f) == 0) && !IsAmyUsingShield)
+	{
+		//playSound(0x8c)
+		HammerSnds2()
+
+		if (!competition_mode.active && Amy_HammerTrail)
+			ExtraChar.amySpawnHammerSwing()
+	}
+}
+
+//# address-hook(0x015862) end(0x015aae)
+function void UpdateTailsAnimation()
+{
+	if (global.xtrachar == 3 && A0 == 0xffffb000)
+	{
+		if (char.state == 0x36)
+		{
+			base.UpdateTailsAnimation()
+			return
+		}
+
+		if (char.state != char.state.former)
+		{
+			char.state.former = char.state
+			char.animation.frame = 0
+			char.animation.timer = 0
+			char.flags &= ~char.flag.PUSHING
+		}
+
+		if (char.state == char.state.STANDING && abs(char.groundspeed) > 0x70 && global.zone != 0x17)
+			char.state = char.state.RUNNING
+
+		if (char.state == char.state.ROLLING || char.state == char.state.SPINDASH || char.state == char.state.SONIC_HANGON)
+		{
+			A1 = 0x012aa6
+			A1 = tableLookupAddress(A1, char.state * 2)
+			
+			D0.u8 = u8[A1]
+			if (D0.u8 == 0xfe)
+				updateAmyAnimationRolling()
+			else
+				updateAmyAnimation_shared()
+		}
+		else
+		{
+			A1 = 0x0997a0
+			UpdateTailsAnimation_inner()
+		}
+	}
+	else
+	{
+		base.UpdateTailsAnimation()
+		return
+	}
+}
+
+// Use normal jump animation for Amy
+function void updateAmyAnimationRolling()
+{
+	D1.u8 = char.flags & char.flag.FACING_LEFT
+	char.render_flags = (char.render_flags & 0xfc) | D1.u8
+
+	--char.animation.timer
+	if (s8(char.animation.timer) >= 0)
+		return
+
+	D2.u16 = abs(char.groundspeed)
+	//A1 = (D2.u16 < 0x600) ? 0x015b18 : 0x015b1d
+	A1 = (D2.u16 < 0x600) ? 0x012b02 : 0x012b0c
+
+	D2.u16 = max(0x400 - D2.s16, 0) >> 8
+	char.animation.timer = D2.u8
+
+	updateAmyAnimation_shared()
+}
+
+function void updateAmyAnimation_shared()
+{
+	D1.u8 = char.flags & char.flag.FACING_LEFT
+	char.render_flags = (char.render_flags & ~(render_flag.FLIP_X | render_flag.FLIP_Y)) | D1.u8
+	D0.u8 = u8[A1 + char.animation.frame + 1]	// Load next animation frame byte
+	if (D0.u8 < 0xfc)
+	{
+		// Advance to next frame
+		char.animation.sprite = D0.u8
+		++char.animation.frame
+	}
+	else if (D0.u8 == 0xfd)
+	{
+		// Change to another animation
+		char.state = u8[A1 + char.animation.frame + 2]
+	}
+	else if (D0.u8 == 0xfe)
+	{
+		// Loop animation from specific frame
+		u8 diff = u8[A1 + char.animation.frame + 2]
+		char.animation.frame -= diff
+		char.animation.sprite = u8[A1 + char.animation.frame + 1]
+		++char.animation.frame
+	}
+	else if (D0.u8 == 0xff)
+	{
+		// Loop animation from the start
+		char.animation.frame = 1
+		char.animation.sprite = u8[A1 + 1]
+	}
+	// Note: (D0.u8 == 0xfc) is an unhandled case
+}
+
+function void updateSonicAnimationRunning()
+{
+	if (global.xtrachar != 3)
+	{
+		base.updateSonicAnimationRunning()
+		return
+	}
+
+	D0 = 0
+	if ((u8[A0 + 0x2d] & 0x80) || char.rotation.x != 0)
+	{
+		updateCharacterAnimationRunning_shared()
+	}
+	else
+	{
+		D0.u8 = (s8(char.rotation) > 0) ? (char.rotation - 1) : char.rotation
+		D2.u8 = char.flags & char.flag.FACING_LEFT
+		if (D2.u8 == 0)
+			D0.s8 = -D0.s8 - 1
+
+		D0.u8 += 0x10
+		D1 = (D0.u8 & 0x80) ? (render_flag.FLIP_X | render_flag.FLIP_Y) : 0
+		D2.u8 ^= D1.u8
+
+		char.render_flags &= ~(render_flag.FLIP_X | render_flag.FLIP_Y)
+		char.render_flags |= D2.u8
+
+		if (char.flags & char.flag.PUSHING)
+		{
+			updateSonicAnimationPushing()
+			return
+		}
+
+		D0.u8 = (D0.u8 >> 4) & 0x06
+		D2.u16 = abs(char.groundspeed)
+		if (char.bonus_effect & char.bonus.INFINITE_INERTIA)
+			D2.u16 *= 2
+
+		// if (char.character == CHARACTER_SONIC)
+		// {
+		// 	if (super.active == 0)
+		// 	{
+		// 		if (D2.u16 < 0x600)
+		// 		{
+		// 			// Sonic's walking animation
+		// 			A1 = 0x012aee
+		// 			D3.u8 = D0.u8 * 4
+		// 		}
+		// 		else
+		// 		{
+		// 			// Sonic's running animation
+		// 			A1 = 0x012af8
+		// 			D3.u8 = D0.u8 * 2
+		// 		}
+		// 	}
+		// 	else
+		// 	{
+		// 		if (D2.u16 < 0x800)
+		// 		{
+		// 			// Super Sonic's walking animation
+		// 			A1 = 0x012c7a
+		// 			D3.u8 = D0.u8 * 4
+		// 		}
+		// 		else
+		// 		{
+		// 			// Super Sonic's running animation
+		// 			A1 = 0x012c84
+		// 			D3.u8 = D0.u8 * 2
+		// 		}
+		// 	}
+		// }
+		// else if (char.character == CHARACTER_TAILS)
+		// {
+		if (D2.u16 < 0x600)
+		{
+			// Tails' walking animation
+			A1 = 0x015b04
+			D3.u8 = D0.u8 * 4
+		}
+		// else if (D2.u16 < 0x700)
+		else
+		{
+			// Tails' running animation
+			A1 = 0x015b0e
+			D3.u8 = D0.u8 * 2
+
+			useAmyDashAnim = (D2.u16 >= AMY_DASH_ANIM_SPEED)
+		}
+		// else
+		// {
+		// 	// Tails' faster running animation
+		// 	A1 = 0x015bfe
+		// 	D3.u8 = D0.u8
+		// }
+		// }
+		// else if (char.character == CHARACTER_KNUCKLES)
+		// {
+		// 	if (D2.u16 < 0x600)
+		// 	{
+		// 		// Knuckles' walking animation
+		// 		A1 = 0x017f3e
+		// 		D3.u8 = D0.u8 * 4
+		// 	}
+		// 	else
+		// 	{
+		// 		// Knuckles' running animation
+		// 		A1 = 0x017f48
+		// 		D3.u8 = D0.u8 * 2
+		// 	}
+		// }
+
+		D0.u8 = u8[A1 + char.animation.frame + 1]
+	#if STANDALONE
+		if (D0.u8 >= 0xfe)		// 0xfe is possible in rare cases when Sonic touches ground while being carried by Tails
+	#else
+		if (D0.u8 == 0xff)
+	#endif
+		{
+			char.animation.frame = 0
+			D0.u8 = u8[A1 + 1]
+		}
+
+		char.animation.sprite = D0.u8 + D3.u8
+		--char.animation.timer
+		if (s8(char.animation.timer) < 0)
+		{
+			char.animation.timer = max(0x800 - D2.s16, 0) >> 8
+			++char.animation.frame
+		}
+	}
+}
+
+
+
+function string ExtraChar.getCharacterName(u8 global.xtrachar)
+{
+	if (global.xtrachar == 3)
+		return "Amy"
+	return base.ExtraChar.getCharacterName(global.xtrachar)
+}
+
+// This function is here only for script mods that want to change or extend the character sprites
+function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationSpriteEx)
+{
+	u8 hammerbounceframe = 0
+	if (global.xtrachar != 3)
+		return base.Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
+
+	if (A0 == 0xffffb04a && !bluespheres.xtrachar)
+	{
+		u8 anim = ((level.framecounter >> 2) % (4))
+		u8 anim2 = ((level.framecounter >> 3) % (2))
+		u64 key = (char.state == char.state.GOT_HURT) ? stringformat("Balloon_pop_0x%02x", anim2) : stringformat("Balloon_0x%02x", anim)
+		if (key == "Balloon_pop_0x01")
+		{
+			// Make the balloon disappear when it pops
+			objA0.render_flags &= ~render_flag.WORLD
+		}
+		return key
+	}
+
+	if !System.getGlobalVariableValueByName("SevenForce.TriggerTitleTimer")
+		hammerbounceframe = ((global.framecounter >> 0) % (8))
+	
+	if (tails.carrying) // Amy hanging onto the balloon
+		return "character_amy_balloon_hang"
+	else if (char.state == char.state.DIED_GREY && Mods.isModActive("Burnt Death Sprites"))
+		return "ThisGirlIsOnFire"
+	else if (char.double_jump_state != 0) && (char.state == char.state.ROLLING) && (!IsAmyUsingShield)
+		return stringformat("character_amy_hammerbounce_%d", hammerbounceframe)
+	else
+		return base.Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
+}
+
+function string getESCharacterFallSpriteKey(u8 character, u8 extrachar)
+{
+	if (extrachar == 3 && character == CHARACTER_TAILS && A0 == 0xffffb000)
+		return "character_amy_fall"
+
+	return base.getESCharacterFallSpriteKey(character, extrachar)
+}
+
+//# address-hook(0x00fe8e) end(0x00ff04)
+function void Character.CheckCollisionsWithDynamicObjects()
+{
+	if (global.xtrachar != 3)
+	{
+		base.Character.CheckCollisionsWithDynamicObjects()
+		return
+	}
+	SonicUpdateRingCollection()
+	UpdateShieldDeflecting()
+
+	bool hasInstaShield = false
+
+	hasInstaShield = (char.double_jump_state != 0) && (char.state == char.state.ROLLING)
+
+	if (hasInstaShield)
+	{
+		// Larger hitbox
+		D2.u16 = char.position.x.u16 - 0x18
+		D3.u16 = char.position.y.u16 - 0x18
+		D4.u16 = 0x30
+		D5.u16 = 0x30
+		Character.CheckCollisionsWithDynamicObjects_partial()
+	}
+	else
+	{
+		D5 = char.hitbox_extends.y - 3
+		D2 = char.position.x.u16 - 8
+		D3 = char.position.y.u16 - D5.u16
+		D4 = 16
+		D5 *= 2
+		Character.CheckCollisionsWithDynamicObjects_partial()
+	}
+}
+
+//# address-hook(0x00ff06) end(0x00ff5e)
+function void Character.CheckCollisionsWithDynamicObjects_partial()
+{
+	bool check = (char.double_jump_state != 0)
+	if (global.xtrachar != 3 || !check)
+	{
+		base.Character.CheckCollisionsWithDynamicObjects_partial()
+		return
+	}
+
+//	System.callFunctionByName("DevModePlus_SetDCB")
+
+#if STANDALONE
+	// Bounding box of player
+	if (DEBUG_DYNAMIC_COLLISIONS)
+		debugDrawRect(D2.u16, D3.u16, D4.u16, D5.u16, 0x8000ff00)
+#endif
+
+	A4 = 0xffffe380
+	u16 numObjects = u16[A4]	// Actually it's twice the number of dynamic objects
+	A4 += 2
+	while (numObjects != 0)
+	{
+		// Get address of dynamic object
+		A1 = 0xffff0000 + u16[A4]
+		A4 += 2
+
+		// Offset into a list of hitbox sizes (the list looks a bit random)
+		u16 offset = objA1.collision_attributes
+		if (offset != 0)
+		{
+			// Targets:
+			//  - 0x04 x 0x04  -> (offset & collision_attributes.size) = collision.size.4x4
+			//  - 0x14 x 0x14  -> (offset & collision_attributes.size) = collision.size.20x20
+			//  - 0x0c x 0x14  -> (offset & collision_attributes.size) = collision.size.12x20
+			//  - 0x14 x 0x0c  -> (offset & collision_attributes.size) = collision.size.20x12
+			//  - 0x04 x 0x10  -> (offset & collision_attributes.size) = collision.size.4x16
+			//  - 0x0c x 0x12  -> (offset & collision_attributes.size) = collision.size.12x18
+			//  - 0x10 x 0x10  -> (offset & collision_attributes.size) = collision.size.16x16
+			//  - 0x06 x 0x06  -> (offset & collision_attributes.size) = collision.size.6x6
+			//  - 0x18 x 0x0c  -> (offset & collision_attributes.size) = collision.size.24x12
+			//  - 0x0c x 0x10  -> (offset & collision_attributes.size) = collision.size.12x16
+			//  - 0x10 x 0x08  -> (offset & collision_attributes.size) = collision.size.16x8
+			//  - 0x08 x 0x08  -> (offset & collision_attributes.size) = collision.size.8x8
+			//  - 0x14 x 0x10  -> (offset & collision_attributes.size) = collision.size.20x16
+			//  - 0x14 x 0x08  -> (offset & collision_attributes.size) = collision.size.20x8
+			//  - 0x0e x 0x0e  -> (offset & collision_attributes.size) = collision.size.14x14
+			//  - 0x18 x 0x18  -> (offset & collision_attributes.size) = collision.size.24x24
+			//  - 0x28 x 0x10  -> (offset & collision_attributes.size) = collision.size.40x16
+			//  - 0x10 x 0x18  -> (offset & collision_attributes.size) = collision.size.16x24
+			//  - 0x08 x 0x10  -> (offset & collision_attributes.size) = collision.size.8x16
+			//  - 0x20 x 0x70  -> (offset & collision_attributes.size) = collision.size.32x112
+			//  - 0x40 x 0x20  -> (offset & collision_attributes.size) = collision.size.64x32
+			//  - 0x80 x 0x20  -> (offset & collision_attributes.size) = collision.size.128x32
+			//  - 0x20 x 0x20  -> (offset & collision_attributes.size) = collision.size.32x32
+			//  - 0x08 x 0x08  -> (offset & collision_attributes.size) = collision.size.8x8_2
+			//  - 0x04 x 0x04  -> (offset & collision_attributes.size) = collision.size.4x4_2
+			//  - 0x20 x 0x08  -> (offset & collision_attributes.size) = collision.size.32x8
+			//  - 0x0c x 0x0c  -> (offset & collision_attributes.size) = collision.size.12x12
+			//  - 0x08 x 0x04  -> (offset & collision_attributes.size) = collision.size.8x4
+			//  - 0x18 x 0x04  -> (offset & collision_attributes.size) = collision.size.24x4
+			//  - 0x28 x 0x04  -> (offset & collision_attributes.size) = collision.size.40x4
+			//  - 0x04 x 0x08  -> (offset & collision_attributes.size) = collision.size.4x8
+			//  - 0x04 x 0x18  -> (offset & collision_attributes.size) = collision.size.4x24
+			//  - 0x04 x 0x28  -> (offset & collision_attributes.size) = collision.size.4x40
+			//  - 0x18 x 0x18  -> (offset & collision_attributes.size) = collision.size.24x24_2
+			//  - 0x18 x 0x18  -> (offset & collision_attributes.size) = collision.size.24x24_3
+			//  - 0x0c x 0x18  -> (offset & collision_attributes.size) = collision.size.12x24
+			//  - 0x48 x 0x08  -> (offset & collision_attributes.size) = collision.size.72x8
+			//  - 0x18 x 0x28  -> (offset & collision_attributes.size) = collision.size.24x40
+			//  - 0x10 x 0x04  -> (offset & collision_attributes.size) = collision.size.16x4
+			//  - 0x20 x 0x02  -> (offset & collision_attributes.size) = collision.size.32x2
+			//  - 0x10 x 0x1c  -> (offset & collision_attributes.size) = collision.size.16x28
+			//  - 0x0c x 0x24  -> (offset & collision_attributes.size) = collision.size.12x36
+			//  - 0x10 x 0x02  -> (offset & collision_attributes.size) = collision.size.16x2
+			//  - 0x04 x 0x40  -> (offset & collision_attributes.size) = collision.size.4x64
+			//  - 0x18 x 0x40  -> (offset & collision_attributes.size) = collision.size.24x64
+			//  - 0x20 x 0x10  -> (offset & collision_attributes.size) = collision.size.32x16
+			//  - 0x1c x 0x14  -> (offset & collision_attributes.size) = collision.size.28x20
+			//  - 0x10 x 0x02  -> (offset & collision_attributes.size) = collision.size.16x2_2
+			//  - 0x10 x 0x01  -> (offset & collision_attributes.size) = collision.size.16x1
+			//  - 0x02 x 0x08  -> (offset & collision_attributes.size) = collision.size.2x8
+			//  - 0x10 x 0x40  -> (offset & collision_attributes.size) = collision.size.16x64
+			//  - 0x0c x 0x04  -> (offset & collision_attributes.size) = collision.size.12x4
+			//  - 0x08 x 0x0c  -> (offset & collision_attributes.size) = collision.size.8x12
+			//  - 0x28 x 0x20  -> (offset & collision_attributes.size) = collision.size.40x32
+			//  - 0x40 x 0x02  -> (offset & collision_attributes.size) = collision.size.64x2
+			//  - 0x60 x 0x02  -> (offset & collision_attributes.size) = collision.size.96x2
+			//  - 0x28 x 0x28  -> (offset & collision_attributes.size) = collision.size.40x40
+			A2 = 0x00ff62 + (offset & collision_attributes.size) * 2
+			s16 hitbox.x = u8[A2]
+			s16 hitbox.y = u8[A2+1]
+
+			u16 px = objA1.position.x.u16 - hitbox.x
+			u16 py = objA1.position.y.u16 - hitbox.y
+			u16 sx = hitbox.x * 2
+			u16 sy = hitbox.y * 2
+
+		#if STANDALONE
+			if (DEBUG_DYNAMIC_COLLISIONS)
+			{
+				if ((offset & collision_attributes.flags) == collision.flag.ITEM)
+					debugDrawRect(px, py, sx, sy, 0x8000ff00)
+				else if ((offset & collision_attributes.flags) == collision.flag.SPECIAL)
+					debugDrawRect(px, py, sx, sy, 0x80ff0000)
+				else if ((offset & collision_attributes.flags) == collision.flag.THREAT)
+					debugDrawRect(px, py, sx, sy, 0x800000ff)
+				else
+					debugDrawRect(px, py, sx, sy, 0x80ff00ff)
+			}
+		#endif
+			
+			u16 hboxX = D2.u16
+			u16 hboxY = D3.u16
+			u16 hboxW = D4.u16
+			u16 hboxH = D5.u16
+			
+			if ((offset & collision_attributes.flags) == collision.flag.THREAT && (u8[A1 + 0x2b] & char.bonus.DEFLECTABLE) == 0 || (offset & collision_attributes.flags) == collision.flag.ITEM && char.velocity.y < 0 && char.position.y.u16 <= objA1.position.y.u16)
+			{
+				hboxH = char.hitbox_extends.y - 3
+				hboxX = char.position.x.u16 - 8
+				hboxY = char.position.y.u16 - hboxH
+				hboxW = 16
+				hboxH *= 2
+			}
+			
+			if (checkBoxOverlap(hboxX, hboxY, hboxW, hboxH, px, py, sx, sy))
+			{
+				// Collision found
+				Character.OnCollisionWithDynamicObject()
+				return
+			}
+		}
+
+		numObjects -= 2
+	}
+}
+
+function void SpringVertical.updateInternal(bool flipY)
+{
+	if (global.xtrachar != 3)
+	{
+		base.SpringVertical.updateInternal(flipY)
+		return
+	}
+
+	u8 characterIndex = 0
+	while (characterIndex < 2)
+	{
+		D1.u16 = 27
+		D2.u16 = 8
+		D3.u16 = flipY ? 9 : 16
+		D4.u16 = objA0.position.x.u16
+		D6 = 0
+
+		u32 characterAddress = 0xffffb000 + characterIndex * 0x4a
+		u8 bitnum = 3 + characterIndex
+		if (fn01dcb6_internal(characterAddress, bitnum))
+		{
+			
+			if (u8[0xffffb000 + 0x2f] != 0) // Amy hammer spin is active
+			{
+				D2.u16 = 2	// Move Y-hitbox down so Amy can hammer spin on the springs
+				fn01df90()
+				fn01df90()
+			}
+			else
+			{
+				fn01df90()
+			}
+		}
+
+		if (flipY)
+		{
+			if (D4.u16 == 0xfffe)
+			{
+				SpringVerticalFlipped.ApplyToCharacter()
+			}
+		}
+		else
+		{
+			if ((objA0.flags2a >> bitnum) & 0x01)
+			{
+				SpringVertical.ApplyToCharacter()
+			}
+		}
+
+		++characterIndex
+	}
+
+	Object.animationUpdate(0x023722)
+	DrawOrUnloadObject()
+}
+
+#if GAMEAPP <= 0x23032500
+// Fix for LBZ act 1 where the snow particles don't appear at the start
+//# address-hook(0x039ad2) end(0x039b64)
+function void fn039ad2()
+{
+	player1.control_override = 1
+	player2.control_override = 1
+	control.player1 = 0
+	control.tails = 0
+
+	A2 = 0xffffb000
+	if (u16[A2 + 0x14] < 0x05c0)
+	{
+		u8[A2 + 0x2e] = 0
+		u16[address1()] = 0x0400
+		u16[address2()] = 0x05c0
+		A2 = 0xffffb04a
+		if (u32[A2] != 0)
+		{
+			u8[A2 + 0x2e] = 0
+			u16[address1()] = 0x0400
+			u16[address2()] = 0x05c0
+		}
+
+		playSound(0x82)
+
+		player1.control_override = 0
+		player2.control_override = 0
+		UnloadObject()
+	}
+	else
+	{
+		fn039b46()
+
+		A2 = 0xffffb04a
+		if (u32[A2] != 0)
+		{
+			fn039b46()
+		}
+	}
+}
+
+function u32 address1()
+{
+	return (u8[A2 + 0x38] == CHARACTER_TAILS) ? 0xffffccbe : 0xffffcc74
+}
+
+function u32 address2()
+{
+	return (u8[A2 + 0x38] == CHARACTER_TAILS) ? 0xffffccb2 : 0xffffcc68
+}
+#endif
+
+// Amy in competition mode
+// Sets the availability status of the character for selection in the Competition menu.
+function bool ExtraChar.CompetitionMode.isCharacterAvailable(u8 xtrachar)
+{
+	if (xtrachar == 0x03)
+		return true
+	
+	// Call the base function
+	return base.ExtraChar.CompetitionMode.isCharacterAvailable(xtrachar)
+}
+
+function void CompetitionMode.Character.BaseUpdate(u32 mainRoutineTableAddress)
+{
+	base.CompetitionMode.Character.BaseUpdate(mainRoutineTableAddress)
+	if (competition.xtrachar == 0x03)
+		ExtraChar.amyHammerBounceHandler()
+	// base.CompetitionMode.Character.BaseUpdate(mainRoutineTableAddress)
+}
+
+
+function void SonicPressedJumpInMidAir()
+{
+	if (competition_mode.active && competition.xtrachar == 0x03)
+	{
+		if (char.double_jump_state == 0)
+		{
+			HammerSnds()
+			HammerSnds2()
+			char.double_jump_state = 1	// Always set this flag; needed for Hammer Bounce
+		}
+		return
+	}
+	base.SonicPressedJumpInMidAir()
+}
+
+function string RenderExtraCharIcon(u8 xtrachar)
+{
+	if (xtrachar == 3)
+		return "level_select_S3C_Amy"
+
+	return base.RenderExtraCharIcon(xtrachar)
+}
+
+//SOZ act 1 intro fix
+//# address-hook(0x042028) end(0x042090)
+function void fn042028()
+{
+	base.fn042028()
+	if (global.xtrachar == 3)
+	{
+		A2 = 0xffffb000
+		D0.u16 = 0x0698
+		if (D0.u16 == u16[A2 + 0x14])
+		{
+			fn042180()
+
+			playSound(0x82)
+
+			A2 = 0xffffb04a
+			if (u32[A2] != 0)
+			{
+				fn042180()
+			}
+		}
+	}
+}
+
+function u32 getCharacterColorsForControllerLEDs(u8 character)
+{
+	return (character == CHARACTER_SONIC && global.xtrachar == 3 && levelselect.characters != 0) ? 0x2500ff : base.getCharacterColorsForControllerLEDs(character)
+}
+
+//# address-hook(0x04e24c) end(0x04e25e)
+function void fn04e24c()
+{
+	// Sonic going Super at MAX difficulty
+	if (global.xtrachar != 3) // Amy shouldn't go super here
+	{
+		base.fn04e24c()
+		return
+	}
+}
+
+function bool Stone.canFightStoneGapsule()
+{
+	if (global.xtrachar == 3)
+		return true
+	
+	return base.Stone.canFightStoneGapsule()
+}
+
+//@ Function taken from sonic3air_dev/scripts/menus/dataselect.lemon
+function bool fn00d458()
+{
+    bool completedSlot = u8[A1] != 0x00 && u8[A1] != 0x80
+    bool controlCheck = (control.pad1.pressed & CONTROL_DOWN) || (control.pad1.pressed & CONTROL_UP)
+
+	if (Mods.isModActive("Extra Save Slots") && System.getGlobalVariableValueByName("ESS_save_entered") == 0)
+		return base.fn00d458()
+    
+    if (u8[A0 + 0x05] == 0x03 && completedSlot && controlCheck)
+    { // This makes it so that you don't see Amy's clear portrait in the zone icons while picking a level
+		u32 backupA0 = A0
+        D6 = 0x0c
+        if (u8[A0 + 0x8a] != 0x01)
+        {
+            u16[A0 + 0x36] = 0x0d
+            u8[A0 + 0x8a] = 0x01
+        }
+        
+        // Zone select
+        D1.u16 = u16[A0 + 0x36]
+        if (control.pad1.pressed & CONTROL_DOWN)
+        {
+            playSound(0x5b)
+            --D1.u16
+            
+            if (D1.s16 < 0x00)
+                D1.u16 = D6.u16
+        }
+        else if (control.pad1.pressed & CONTROL_UP)
+        {
+            playSound(0x5b)
+            ++D1.u16
+            
+            if (D1.u16 > D6.u16)
+                D1 = 0x00
+        }
+        u16[A0 + 0x36] = D1.u16
+        waitForNextFrame()
+		DataSelect.drawCustomPlanes()
+
+		A0 = backupA0
+        
+        // Return the Base function
+        return base.fn00d458()
+    }
+    else 
+        return base.fn00d458() // Return the Base function
+}
+
+//Fix for DDZ when transforming
+//# address-hook(0x08160a) end(0x081676)
+function void fn08160a()
+{
+	super.palettefx.timer.tails = 0x0f
+	base.fn08160a()
+}

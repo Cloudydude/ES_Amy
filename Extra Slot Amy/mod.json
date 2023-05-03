@@ -1,0 +1,206 @@
+{
+	"Metadata":
+	{
+		"Name": "Extra Slot Amy",
+		"Author": "MiaCDi, BLU=, iCloudius & Dynamic Lemons",
+		"Description": "Play as Amy Rose!",
+		"ModVersion": "pre-release 0.01",
+		"GameVersion": "20.07.24.0"
+	},
+	"Settings":
+	{
+		"Settings":
+		[
+			{
+				"InternalName": "Funni Shields",
+				"DisplayName": "Elemental Shields",
+				"Variable": "Amy.Elemental.Shields",
+				"DefaultValue": "0",
+				"Category": "Gameplay",				
+				"Options":
+				{
+					"0": "Off",
+					"1": "On"
+				}
+			},
+			{
+				"InternalName": "Amy Shield Inputs",
+				"DisplayName": "Shield Button",
+				"Variable": "Amy_Shield_Button",
+				"DefaultValue": "0x10",	
+				"Category": "Controls",			
+				"Options":
+				{
+					"0x10": "B",
+					"0x20": "C",
+					"0x40": "A"
+				}
+			},
+			{
+				"InternalName": "Hammer Trail",
+				"DisplayName": "Hammer Trail",
+				"Variable": "Amy_HammerTrail",
+				"DefaultValue": "0",
+				"Category": "Appearance",				
+				"Options":
+				{
+					"0": "Off",
+					"1": "On"
+				}
+			},
+			{
+				"InternalName": "Palette",
+				"DisplayName": "Palette",
+				"Variable": "AmyPalette",
+				"Category": "Appearance",
+				"DefaultValue": "0",
+				"Options":
+				{
+					"0": "Sonic 3",
+					"1": "Legacy",
+					"2": "Sonic CD",
+					"3": "Sonic Mania",
+					"4": "ANTONBLAST",
+					"5": "Undertale: Bits & Pieces",
+					"6": "Leapster",
+					"7": "Sonic Drift 2"
+				}
+			},
+			{
+				"InternalName": "Amy Gray Palette",
+				"DisplayName": "Grays",
+				"Variable": "AmyGrays",
+				"Category": "Appearance",
+				"DefaultValue": "0",
+				"Options":
+				{
+					"0": "Unique",
+					"1": "Consistent"
+				}
+			},
+			{
+				"InternalName": "InvTheme",
+				"DisplayName": "Invincibility Theme",
+				"Variable": "AmyInvTheme",
+				"Category": "Audio",
+				"DefaultValue": "0",
+				"Options":
+				{
+					"0": "Menu Option",
+					"1": "ANTONBLAST"
+				}
+			},
+			{
+				"InternalName": "Amy Super Pallete",
+				"DisplayName": "Super Pallete",
+				"Variable": "Amy_Super_Pallete",
+				"DefaultValue": "0",
+				"Category": "Super Palette",				
+				"Options":
+				{
+					"0": "Main Color",
+					"1": "Super/Hyper Sonic"
+				}
+			},
+			{
+				"InternalName": "Amy Super Glow",
+				"DisplayName": "Super/Hyper Glow",
+				"Variable": "Amy_Glow",
+				"DefaultValue": "1",
+				"Category": "Super Palette",				
+				"Options":
+				{
+					"0": "Cycle",
+					"1": "Flash White"
+				}
+			},
+			{
+				"InternalName": "Amy White Flash",
+				"DisplayName": "Super/Hyper White Flash",
+				"Variable": "Amy_Flash",
+				"DefaultValue": "1",
+				"Category": "Super Palette",				
+				"Options":
+				{
+					"0": "Pure White",
+					"1": "Mostly White"
+				}
+			},
+			{
+				"InternalName": "Amy Rotate",
+				"DisplayName": "Smooth Sprite Rotation",
+				"Variable": "Amy_Rotate",
+				"Category": "Appearance",
+				"DefaultValue": "0",
+				"Options":
+				{
+					"0": "Off",
+					"1": "On"
+				}
+			},
+			{
+				"InternalName": "Amy Display",
+				"DisplayName": "Enable Custom Banner",
+				"Variable": "Amy_Custom_Banner",
+				"DefaultValue": "1",
+				"Category": "Zone Banner",		
+				"Options":
+				{
+					"0": "No",
+					"1": "Yes"
+				}
+			},
+			{
+				"InternalName": "Amy Banner Text",
+				"DisplayName": "Banner Text",
+				"Variable": "Amy_Banner_Text",
+				"DefaultValue": "1",
+				"Category": "Zone Banner",				
+				"Options":
+				{
+					"0": "DA Garden",
+					"1": "Sonic 3 A.I.R",
+					"2": "Sonic 3",
+					"3": "Sonic & Knuckles",
+					"4": "Sonic 3 & Knuckles"
+				}
+			},
+			{
+				"InternalName": "Amy Banner Display",
+				"DisplayName": "Show Banner in DDZ",
+				"Variable": "Display_Amy_Banner",
+				"DefaultValue": "0",
+				"Category": "Zone Banner",		
+				"Options":
+				{
+					"0": "Yes",
+					"1": "No"
+				}
+			},
+			{
+				"InternalName": "Amy Zone Banner",
+				"DisplayName": "DA Garden Zone Banner",
+				"Variable": "Amy_Zone_Banner",
+				"DefaultValue": "0",
+				"Category": "Zone Banner",				
+				"Options":
+				{
+					"0": "Default",
+					"1": "DA Garden"
+				}
+			},
+			{
+				"InternalName": "Unique Amy speed shoes",
+				"DisplayName": "Speed Shoes Icon",
+				"Variable": "Amy_Speed_Shoes",
+				"DefaultValue": "0",
+				"Category": "Misc.",				
+				"Options":
+				{
+					"0": "Unique",
+					"1": "Default"
+				}
+			}
+		]
+	}
+}

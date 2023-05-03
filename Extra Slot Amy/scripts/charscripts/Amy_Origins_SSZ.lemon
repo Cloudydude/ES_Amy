@@ -1,0 +1,80 @@
+function void XtraEscape()
+{
+	if (global.xtrachar == 3)
+	{
+		A1 = 0xffffb000
+		u8[A1 + 0x20] = char.state.ROLLING
+		objA1.animation.sprite = 0x96
+		objA0.velocity.y = (u8[0xfffb000 + 0x38] == CHARACTER_SONIC) ? 0x320 : 0x1e0 
+		HammerSnds()
+		HammerSnds2()
+
+		objA0.value42 = 1
+
+		return
+	}
+	base.XtraEscape()
+}
+
+function bool XtraOnGround()
+{
+	if (global.xtrachar == 3)
+	{
+		Amybreaksout()
+		return true
+	}
+
+	return base.XtraOnGround()
+}
+
+function void Amybreaksout()
+{
+
+	UpdateMovementStraightSimple()
+	A1 = 0xffffb000
+	objA1.position.x.u16 = objA0.position.x.u16
+	objA1.position.y.u16 = objA0.position.y.u16
+	D0.u16 = objA0.position.x.u16
+
+	CheckGroundCollision()
+	u8[0xffffb000 + 0x2f] = 1 // char double jump
+
+	if (D1.u16 > 23)
+	{
+		if ((level.framecounter.low & 0x09) == 0)
+		{
+			HammerSnds2()
+			ExtraChar.amySpawnHammerSwing()
+		}
+	}
+	else if (D1.u16 <= 15)
+	{
+		u8[0xffffb000 + 0x2e] = 0
+		if (objA0.value42)
+		{
+			u8[0xffffb000 + 0x2f] = 2
+			SpawnAmyDustClouds()
+			AmyLandingSnds()
+			objA0.velocity.y = -0x700
+			s16[0xffffb000 + 0x1c] = objA0.velocity.x = 0x310
+			objA0.value42 = 0
+		}
+		u16[0xffffb000 + 0x14] = 0x4b0
+	}
+	else if (!objA0.value42 && D1.u16 > 15)
+	{
+		objA0.velocity.y += 0x72
+	}
+
+
+
+	if (D0.u16 < level.bossarea.right)
+		return
+
+	player1.control_override = 0
+
+	objA0.update_address = 0x07ccb0
+	objA0.velocity.x = 0
+	objA0.velocity.y = 0
+	objA0.hitbox_extends.y = 0x10
+}

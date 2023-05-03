@@ -1,0 +1,43 @@
+{
+	"monitor_icon_amy":  { "File": "amy_life_icon.bmp", "Rect": "0,0,16,16", "Center": "8,8" },
+
+	"Amy_continue_alt":  { "File": "Amy_alt_continues.bmp", "Rect": "0,0,16,22", "Center": "10,24" },
+	"ESS_Cont_Es3":  { "File": "Amy_dataselect_continue.bmp", "Rect": "72,0,16,21", "Center": "8,21" },
+	"DA_Amy_Cont":  { "File": "AMY_DA_Garden.png", "Rect": "0,0,16,22", "Center": "9,23" },
+	"ESS_Life_Es3":  { "File": "Amy_dataselect_continue.bmp", "Rect": "0,0,16,16", "Center": "8,16" },
+	"continue_icon_slot3":  { "File": "Amy_alt_continues.bmp", "Rect": "0,0,0,0", "Center": "1,1" },
+	"monitor_amy_shoe":  { "File": "Amy_shoe.bmp", "Rect": "0,0,16,16", "Center": "8,8" },
+
+	"Amy_continue_icon_0x00":  { "File": "Amy_dataselect_continue.bmp", "Rect": "29,21,15,23", "Center": "8,24" },
+	"Amy_continue_icon_0x01":  { "File": "Amy_dataselect_continue.bmp", "Rect": "59,21,15,23", "Center": "9,24" },
+	"Amy_continue_icon_0x02":  { "File": "Amy_dataselect_continue.bmp", "Rect": "29,21,15,23", "Center": "8,24" },
+	"Amy_continue_icon_0x03":  { "File": "Amy_dataselect_continue.bmp", "Rect": "59,21,15,23", "Center": "9,24" },
+	
+	"level_select_S3C_Amy":  { "File": "Amy_dataselect_continue.bmp", "Rect": "0,0,16,16", "Center": "0,0" },
+
+	//"result_nameplate_slot3_super":  { "File": "Super_hyper_text.bmp", "Rect": "0,8,74,16", "Center": "0,0" },
+	//"result_nameplate_slot3_hyper":  { "File": "Super_hyper_text.bmp", "Rect": "88,8,74,16", "Center": "0,0" },
+
+	"Amy_Super_text":  { "File": "Super_hyper_text.bmp", "Rect": "0,8,74,16", "Center": "0,0" },
+	"Amy_Hyper_text":  { "File": "Super_hyper_text.bmp", "Rect": "88,8,74,16", "Center": "0,0" },
+
+	"Amy_Super_text_CD":  { "File": "Super_hyper_text.bmp", "Rect": "0,40,74,16", "Center": "0,0" },
+	"Amy_Hyper_text_CD":  { "File": "Super_hyper_text.bmp", "Rect": "88,40,74,16", "Center": "0,0" },
+
+	"signpost_slot3_0x01": { "File": "character_amy_signpost.bmp", "Rect": "0,0,48,32", "Center": "24,16" },
+	"Mania_signpost_slot3": { "File": "character_amy_signpost.bmp", "Rect": "52,2,48,30", "Center": "24,14" },
+
+	"titleCard_Amy_in_DA":  { "File": "Amy_TitleCards.png", "Rect": "0,48,64,176", "Center": "0,0" },
+	"titleCard_Amy_in_S3_air":  { "File": "Amy_TitleCards.png", "Rect": "64,46,66,178", "Center": "0,0" },
+	"titleCard_Amy_in_S3&K":  { "File": "Amy_TitleCards.png", "Rect": "262,46,66,178", "Center": "0,0" },
+	"titleCard_Amy_in_S&K":  { "File": "Amy_TitleCards.png", "Rect": "130,46,66,178", "Center": "0,0" },
+	"titleCard_Amy_in_S3":  { "File": "Amy_TitleCards.png", "Rect": "196,46,66,178", "Center": "0,0" },
+	"titleCard_Amy_in_DAGE_def":  { "File": "Amy_TitleCards.png", "Rect": "328,46,66,178", "Center": "0,0" },
+
+	"Goal_animes_slot3_0":  { "File": "Amy Signs.bmp", "Rect": "0,0,48,32", "Center": "24,16" },
+	"Goal_animes_slot3_1":  { "File": "Amy Signs.bmp", "Rect": "0,32,48,32", "Center": "24,16" },
+	"Goal_animes_slot3_2":  { "File": "Amy Signs.bmp", "Rect": "0,64,48,32", "Center": "24,16" },
+	"Goal_animes_slot3_3":  { "File": "Amy Signs.bmp", "Rect": "0,96,48,32", "Center": "24,16" },
+	"my":  { "File": "sweetamy.png", "Rect": "0,0,272,204", "Center": "48,-12" }
+
+}

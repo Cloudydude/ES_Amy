@@ -1,0 +1,550 @@
+global bool AmyGrays
+global bool Amy_Custom_Banner
+global u8 Amy_Banner_Text
+global bool Display_Amy_Banner
+global bool Amy_Zone_Banner
+
+function void Amy_Grays(u32 targetAddress, u8 paletteVariant)
+{
+	if (AmyGrays)
+	{
+		u16[targetAddress + 2 * 12] = (paletteVariant != 0) ? 0x0eac : 0x0ecc
+		u16[targetAddress + 2 * 13] = (paletteVariant != 0) ? 0x0c8a : 0x0caa
+		u16[targetAddress + 2 * 14] = (paletteVariant != 0) ? 0x0846 : 0x0866
+	}
+}
+
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+	u64 key = 0
+	u8 gameMode = global.game_mode & 0x7f
+	bool prioFlag = (objA0.sprite_attributes & 0x8000) != 0x00
+	u8 flags = prioFlag ? SPRITE_FLAG_PRIO : 0x00
+
+	// Secret Screen
+	if (SweetAmy == 1 && (objA0.update_address == 0x05f2ea || objA0.update_address == 0x05f46a))
+	{
+		Standalone.playAudio(0x28)
+		key = "my"
+		Renderer.drawCustomSprite(key, getScreenExtend() + 70, 0, 0, 0x40, 0xffff)
+		return true
+	}
+
+	// Makes it so that the balloon doesn't turn into garbage when in debug mode
+	// player
+    if (objA0.update_address == 0x010a94 || objA0.update_address == 0x01365c || objA0.update_address == 0x016444)
+    {
+        // lemons things to work around euka things!
+        // this is stupid 
+        // euka why do you do this
+        if (debug_mode.state && A0 == 0xffffb04a)
+            return Standalone.drawCharacterSprite(char.character, 1, px, py, false)
+    }
+
+	// Amy during the best ending logo
+	if (objA0.update_address == 0x1ffbe0 || objA0.update_address == 0x1ffbd0)
+	{
+		if (objA0.value3a == 0x03)
+		{
+			u8 character = 5
+			u8 atex = 0x40 + character * 0x20
+			u8 animation = ((level.framecounter >> 4) % (4) + 0xb1)
+			if (objA0.animation.sprite >= 0x03)
+				animation = (objA0.animation.sprite == 0x03) ? 0xa5 : 0xa6
+			key = stringformat("character_amy_0x%02x", animation)
+			Renderer.drawCustomSprite(key, px, py + 4, atex, flags, objA0.value42)
+			return true
+		}
+	}
+
+	if (u8[A0 + 0x38] == 0xff && objA0.animation.sprite == 5 && objA0.animation.timer == 3 && u16[0xffffb04a + 0x30] == 0)
+	{
+		u64 portrait = 0
+		if (u8[A0 + 0x23] == 0x18)
+			portrait = "dataSel_savePortrait_slot3"
+		else if (u8[A0 + 0x23] == 0x19)
+			portrait = "dataSel_savePortrait_superslot3"
+		else if (u8[A0 + 0x23] == 0x1b)
+			portrait = "Clear_slot3"
+		if (Renderer.hasCustomSprite(portrait))
+		{
+		#if GAMEAPP >= 0x22051500
+			Renderer.drawCustomSprite(portrait, px, py - ((Mods.isModActive("Data Select Character Sprites - MAIN") && System.getGlobalVariableValueByName("MenuStyle.dataSelect") == 0) ? 8 : 0), 0, SPRITE_FLAG_PRIO, renderQueue)
+		#endif
+		#if GAMEAPP <= 0x22050800
+			Renderer.drawCustomSprite(portrait, px, py, 0, SPRITE_FLAG_PRIO, renderQueue)
+		#endif
+			u8[A0 + 0x23] = 0
+		}
+	}
+
+	//Balloon String
+	if (objA0.update_address == 0x2042F0 && objA0.subtype2c == 0x01)
+	{
+		u8 anim = ((level.framecounter >> 3) % (2))
+		key = stringformat("Balloon_string_0x%02x", anim)
+		if (Renderer.hasCustomSprite(key))
+			Renderer.drawCustomSprite(key, px, py, 0x60, SPRITE_FLAG_PRIO, renderQueue)
+		return true
+	}
+
+	if (global.xtrachar == 3)
+	{
+		// Blue Spheres
+		if (objA0.update_address == 0x02ea50 || objA0.update_address == 0x02ec1e || objA0.update_address == 0x02eac8)
+		{
+			// Load Amy's palette so that the icons and text aren't blank
+			u32 offset = CHARACTER_TAILS * 0x40
+			u32 dest   = 0x802000 + offset
+			zeroMemory(dest, 0x40)
+			u16 numColors = System.loadExternalPaletteData(getExtraCharacterPaletteKey(3), 0, 0x800000, 0x20)
+			for (u16 i = 0; i < numColors; ++i)
+			{
+				u32 rgba = u32[0x800000 + i * 4]
+				u16[dest + i * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
+			}
+			Amy_Grays(dest, 0)
+		}
+
+		// Blue Spheres game mode winning screens
+		if (gameMode == 0x34 || gameMode == 0x48 || gameMode == 0x2c || gameMode == 0x30 || global.game_mode == 0x85 || global.game_mode == 0x87) //just check for Ray, thanks!
+		{
+			if (bluespheres.xtrachar)
+			{
+				if ((objA0.mapping_offset == 0x146620 || objA0.update_address == 0x04e000))
+				{
+					u8 atex = getatex(0x03)
+					u8 animation = (objA0.animation.sprite == 0xb0) ? 0xa5 : 0xa6
+					key = stringformat("character_amy_0x%02x", animation)
+					Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue)
+					return true
+				}
+			}
+		}
+
+		//Keeping these incase we need to reorder them.
+		if (gameMode == 0x48 || gameMode == 0x0c)
+		{
+			if (objA0.update_address == 0x02ec1e)
+			{
+				if (objA0.animation.sprite == 0x14 || objA0.animation.sprite == 0x15)
+				{
+					Renderer.drawCustomSprite(getCharacterResultsNameplate(0x00), px, py, 0x60, SPRITE_FLAG_PRIO, renderQueue)
+					return true
+				}
+			}
+		}
+		else if (global.game_mode == 0x14)
+		{
+			u8 atex = 0x40 + getMainCharacter() * 0x20
+			if (objA0.update_address == 0x05ca5c)
+			{
+				key = stringformat("Amy_continue_icon_0x%02x", objA0.animation.sprite)
+				if (Renderer.hasCustomSprite(key))
+					Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue)
+				return true
+			}
+			else if (objA0.update_address == 0x05c74a) // Amy continue animation
+			{
+				key = stringformat("ESamy_continue_%d", ((global.framecounter >> 3) % (4)))
+				if (Renderer.hasCustomSprite(key))
+					Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue)
+				return true
+			}
+			else if (objA0.update_address == 0x05c790) // Amy idle and running
+			{
+				key = stringformat("character_amy_0x%02x", objA0.animation.sprite)
+				if (Renderer.hasCustomSprite(key))
+					Renderer.drawCustomSprite(key, px, py + 4, atex, flags, renderQueue)
+				return true
+			}
+		}
+
+		if (objA0.update_address == 0x02ea50 || objA0.update_address == 0x02ec1e || objA0.update_address == 0x02dd98)
+		{
+			if (objA0.animation.sprite == 0x12)
+			{
+				if (global.super_emeralds == 7) // HYPER
+				{
+					Renderer.drawCustomSprite(getAmyTextHyper(), px, py, 0x60, SPRITE_FLAG_PRIO, renderQueue)
+					return true
+				}
+				else // SUPER
+				{
+					Renderer.drawCustomSprite(getAmyTextSuper(), px, py, 0x60, SPRITE_FLAG_PRIO, renderQueue)
+					return true
+				}
+			}
+		}
+
+		//Ending pose
+		if (objA0.update_address == 0x05e18a) 
+		{	
+			if (outro.ending_type >= 0 && !objA0.value26)
+				SuperandHyperPalette_Amy(AmyColor1, AmyColor2, AmyColor3)
+
+			Renderer.drawCustomSprite(stringformat("AmyEndPose_0x%02x", objA0.animation.sprite), px, py, 0x60, objA0.render_flags | (prioFlag ? SPRITE_FLAG_PRIO : 0), renderQueue)
+			return true        
+		}
+
+		if ((objA0.update_address == 0x02ebe8 || objA0.update_address == 0x02ec4a) && objA0.animation.sprite >= 0x29 && objA0.animation.sprite <= 0x2b)
+		{
+			key = "Amy_continue_alt"
+			if (Renderer.hasCustomSprite(key))
+				Renderer.drawCustomSprite(key, px, py, 0, flags, renderQueue)
+			return true
+		}
+
+		if (objA0.update_address == 0x2042F0)
+		{
+			if (objA0.subtype2c == 0x04) // Dwayne
+				key = "Dwayne_Johnson"
+			else if (objA0.subtype2c == 0x05) // Dwayne the pebble
+				key = stringformat("dwayne_0x%02x", objA0.animation.sprite)
+			else if (objA0.subtype2c == 0x06) // Tarot cards
+				key = stringformat("Amy_Tarotcard_0x%02x", objA0.animation.sprite)
+			else
+				return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+
+			if (Renderer.hasCustomSprite(key))
+				Renderer.drawCustomSprite(key, px, py, 0x60, SPRITE_FLAG_PRIO, renderQueue)
+			return true
+		}
+
+		//small characters on the tornado
+		//this object address is for BOTH the character ON the plane and the driver!
+		//check its subtype as well
+		if (objA0.update_address == 0x05ed18) //standing character
+		{
+			u8 flags2 = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((objA0.sprite_attributes & 0x8000) ? SPRITE_FLAG_PRIO : 0)
+			if (objA0.subtype2c != 0) //standing character
+			{
+				key = "mini_amy"
+				Renderer.drawCustomSprite(key, px, py, 0x60, flags2, renderQueue, 0, 255)		
+				return true
+			}
+			else //pilot
+			{ // DON'T RENDER HERE
+				return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+			}
+		}
+
+		//small and micro plane
+		//small plane and micro outside
+		//0x05d86a is contemporarily the small tornado flying right and the micro one flying left!
+		if (objA0.update_address == 0x05d86a)
+		{   
+			//if flying left use the micro character
+			if (char.render_flags & 0x01)
+			{
+				u8 flags2 = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((objA0.sprite_attributes & 0x8000) ? SPRITE_FLAG_PRIO : 0)
+				// atex = 0x40 + 0x20 * getMainCharacter()
+				key = "micro_amy"
+				//u64 pilot = (Mighty_Pilot == 0) ? "Micro_Sonic" : "Micro_Tails"
+
+
+				Renderer.drawCustomSprite(key, px, py, 0x60, flags2, renderQueue+1) // Mighty on the plane
+				Renderer.drawCustomSprite("micro_amy", px, py, 0, flags, 0) // The pilot and the plane, make it nobody
+				//Renderer.drawCustomSprite(pilot, px, py, 0, flags, renderQueue+1) // The pilot and the plane
+				Renderer.addSpriteMask(px - 11, py - 28, 23, 20, renderQueue + 1, 8000)
+				//Renderer.drawCustomSprite(plane, px, py, 0, flags, renderQueue+1) // The pilot and the plane
+				//return true
+			}
+			else
+			{ //this would be the small tornado, so render normally.
+				return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+			}		
+		}
+
+
+		//Intro
+		if (objA0.update_address == 0x063466 && global.zone_act == 0x0000 && !global.zone_act.apparent)
+		{
+			u8 atex = 0x40 + getMainCharacter() * 0x20
+			if (objA0.value42 == 2) // after getting blown up, uses main game animations
+				key = stringformat("character_amy_0x%02x", ((objA0.animation.sprite == 0x8d) ? 0x8a : objA0.animation.sprite))
+			else if (objA0.value42 == 4) // after getting blown up and getting mad
+			{
+				u8 animationsprite = objA0.animation.sprite
+				if (objA0.value26)
+					animationsprite = ((global.framecounter >> 3) % (2) + 0x0a)
+				else if (animationsprite >= 0x0a)
+					objA0.value26 = true
+				key = stringformat("cutscene_amy_0x%02x", animationsprite)
+			}
+			else //  Chilling before getting blown up
+			{
+				++objA0.value3e
+				if (objA0.animation.sprite < 2)
+				{
+					u8 animationsprite = ((objA0.value3e >> 5) % (11) + 0x10)
+					if (animationsprite >= 0x19 || objA0.value3e >= 290)
+						animationsprite = (objA0.value3e >= 297) ? 0x1a : ((objA0.value3e >> 3) % (2) + 0x19)
+					
+					key = stringformat("cutscene_amy_0x%02x", animationsprite)
+				}
+				else
+					key = "cutscene_amy_0x1b"
+			}
+
+			if (Renderer.hasCustomSprite(key))
+			{
+				Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue)
+				return true
+			}
+			else
+				return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+		}
+
+		if (objA0.update_address == 0x02d8e2 && Amy_Custom_Banner) //&& global.zone != 0x0c
+		{
+			if (Display_Amy_Banner && global.zone == 0x0c)
+				return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+			else
+			{
+				key = (Amy_Banner_Text == 0 && Amy_Zone_Banner == 1) ? "DA" : (Amy_Banner_Text == 0) ? "DAGE_def" : (Amy_Banner_Text == 1) ? "S3_air" : (Amy_Banner_Text == 2) ? "S3" : (Amy_Banner_Text == 3) ? "S&K" : "S3&K"
+				Renderer.drawCustomSprite(stringformat("titleCard_Amy_in_%s", key), px - 0x20, py - 0x40, 0x00, SPRITE_FLAG_PRIO | SPRITE_FLAG_NO_GLOBAL_TINT, renderQueue)
+				return true
+			}
+		}
+	}
+	return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}
+
+function string getCharacterResultsNameplate(u8 character)
+{
+	// Special handling for active extra character
+	if (global.xtrachar == 3 && character == CHARACTER_TAILS && AmyPalette == 2)
+		return "result_nameplate_slot3_CD"
+	
+	// Call the base function
+	return base.getCharacterResultsNameplate(character)
+}
+
+function string getAmyTextHyper()
+{
+	return (AmyPalette == 2) ? "Amy_Hyper_text_CD" : "Amy_Hyper_text"
+}
+
+function string getAmyTextSuper()
+{
+	return (AmyPalette == 2) ? "Amy_Super_text_CD" : "Amy_Super_text"
+}
+
+// This block here is for the flash effect during the ending
+//# address-hook(0x08555e) end(0x08558e)
+function void fn08555e()
+{
+    base.fn08555e()
+
+	if ((global.framecounter % 0x02) == 0x00 && global.xtrachar == 0x03)
+	{
+		if (objA0.update_address != 0x01abb6)
+			u8[0xffffb128 + 0x26] = 1
+	}
+}
+
+// Animated goalposts
+function u64 GetXtraName(u8 xtrachar, u8 char)
+{
+	if (xtrachar == 3 && char == CHARACTER_TAILS)
+		return "slot3"
+
+	return base.GetXtraName(xtrachar, char)
+}
+
+#if STANDALONE
+
+function string getManiaInspSignpost(u8 character)
+{
+	u64 key = 0x00
+
+	if (global.xtrachar == 3 && character == CHARACTER_TAILS)
+		key = "Mania_signpost_slot3"
+
+	if (key != 0x00 && Renderer.hasCustomSprite(key))
+		return key
+
+	return base.getManiaInspSignpost(character)
+}
+
+#endif
+
+// Prevent Sonic from appearing in Amy's continue screen
+//# address-hook(0x05c52a) end(0x05c59c)
+function void fn05c52a()
+{
+	if (global.xtrachar != 3)
+	{
+		base.fn05c52a()
+		return
+	}
+}
+
+// Amy about to chase after Knuckles
+//# address-hook(0x05c74a) end(0x05c788)
+function void fn05c74a()
+{
+	if (global.xtrachar == 3)
+	{
+		A1 = 0xffff0000 + u16[0xfffffaa4]
+		if ((u8[A1 + 0x38] & 0x08) == 0)
+		{
+			objA0.animation.sprite = (global.framecounter.low & 0x20) ? 6 : 5
+			DrawObject()
+		}
+		else
+		{
+			objA0.update_address = 0x05c790
+			u32[0xffffcc54] = 0x05c82c
+
+			fn05c790()
+		}
+	}
+	else
+	{
+		base.fn05c74a()
+		return
+	}
+}
+
+// Reposition Amy
+//# address-hook(0x05c718) end(0x05c7a4)
+function void fn05c718()
+{
+	base.fn05c718()
+	if (global.xtrachar == 3)
+		objA0.position.x.u16 = 0x0120 + getScreenExtend()
+}
+
+// Disable continue icon Tails' tails
+//# address-hook(0x05ca9e) end(0x05caa8)
+function void fn05ca9e()
+{
+	if (global.xtrachar != 3)
+	{
+		base.fn05ca9e()
+		return
+	}
+}
+
+function void ExtraChar.Competition.drawCharacterContinueSprite(s16 px, s16 py, u16 renderQueue)
+{
+	if (objA0.animation.timer == 0x03)
+	{
+		u8 atex = getatex(0x03)
+		// string key = stringformat("ESS_Cont_Es%d", objA0.animation.timer)
+		Renderer.drawCustomSprite("Amy_continue_alt", px + 3, py, 0x80, 0x00, renderQueue)
+		return
+	}
+	
+	// Call the base function
+	base.ExtraChar.Competition.drawCharacterContinueSprite(px, py, renderQueue)
+}
+
+function void ExtraChar.Challenges.drawCharacterContinueSprite(u8 xtrachar, s16 px, s16 py, u8 flags, u16 renderQueue)
+{
+	if (xtrachar == 0x03)
+	{
+		Renderer.drawCustomSprite("DA_Amy_Cont", px, py, 0x00, flags, renderQueue)
+		return
+	}
+	
+	// Call the base function
+	base.ExtraChar.Challenges.drawCharacterContinueSprite(xtrachar, px, py, flags, renderQueue)
+}
+
+function bool ExtraChar.onWriteToCompetitionSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+	if ((objA0.update_address == 0x0105c4 || objA0.update_address == 0x013102))
+	{
+		if (char.character >= 0x03 && competition.xtrachar == 0x03)
+		{
+			string key
+			u8 atex = 0x40 + char.character * 0x20
+			u8 flags = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((objA0.sprite_attributes & 0x8000) ? SPRITE_FLAG_PRIO : 0)
+
+			u8 hammerbounceframe_comp = (global.framecounter >> 1) & 0x03
+
+			if (char.double_jump_state != 0) && (char.state == char.state.ROLLING)
+			{
+				key = stringformat("comp_character_amy_hammerbounce_%d", hammerbounceframe_comp)
+				Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue)
+				return true
+			}
+		}
+	}
+	
+	// Return the base function
+	return base.ExtraChar.onWriteToCompetitionSpriteTable(px, py, renderQueue)
+}
+
+global u16 SweetAmy
+//# address-hook(0x05f26c) end(0x05f2dc)
+function void fn05f26c()
+{
+	base.fn05f26c()
+	if (global.xtrachar == 3 && outro.ending_type == 2)
+		SweetAmy = System.rand() % 50 // 2% chance of happening
+}
+
+
+//# address-hook(0x02dd3e) end(0x02dd92)
+function void LevelResults.UpdateCharacterNameDisplay()
+{
+	if (global.xtrachar == 3)
+	{
+		++objA0.animation.sprite
+
+		D0 = 0x05
+		objA0.position.x.u16 += D0.u16
+		u16[A0 + 0x46] += D0.u16
+		objA0.box_size.x -= D0.u8
+
+		A1 = 0xffff0000 + u16[A0 + 0x48]
+		D0 = (u16[A1 + 0x2c] != 0) ? 0x0028 : 0
+		objA0.sprite_attributes = D0.u16
+		objA0.update_address = 0x02dd98
+		LevelResults.UpdateStaticTextDisplay()
+		return
+	}
+	base.LevelResults.UpdateCharacterNameDisplay()
+}
+
+function bool ESS_drawChar_Es(s16 px, s16 py, bool no_save, u8 ES_val)
+{
+	if (ES_val == 0x03)
+	{		
+		ExtraChar.DataSelect.drawCharacterSprite(px, py, 0x6000)
+		return true
+	}
+	
+	return base.ESS_drawChar_Es(px, py, no_save, ES_val)
+}
+
+function void ExtraChar.DataSelect.drawCharacterSprite(s16 px, s16 py, u16 renderQueue)
+{
+	u8 atex
+	string key
+#if EXTRA_SAVE_SLOTS_ACTIVE
+	if (u8[A3 + 0x24] == 0x03)
+#else
+	if (objA0.animation.timer == 0x03)
+#endif
+	{
+		atex = getatex(0x03)
+		key = "dataSel_slot3"
+		Renderer.drawCustomSprite(key, px, py, atex, SPRITE_FLAG_PRIO, renderQueue)
+		return
+	}
+	// Call the base function
+	base.ExtraChar.DataSelect.drawCharacterSprite(px, py, renderQueue)
+}
+
+function s32 ESS_saveBoxGetColor_Es(u8 ES_val)
+{
+	if (ES_val == 0x03)
+		return 0xfcb400 // need to change this
+	
+	return base.ESS_saveBoxGetColor_Es(ES_val)
+}

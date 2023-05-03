@@ -389,7 +389,20 @@ function void fn0140ce()
 		objA0.render_flags |= render_flag.WORLD
 		char.hitbox_extends.y = 11
 		char.hitbox_extends.x = 10
+		char.box_size.x = 90 // Width
+		char.box_size.y	= 90 // Height
 	}
+}
+
+//# address-hook(0x013a10) end(0x013b24)
+function void Character.TailsAI.Init()
+{
+	if (global.xtrachar == 3)
+	{// This is so that balloon doesn't awkwardly disappear when it floats away in CNZ and MHZ
+		char.box_size.x = 20 // Width
+		char.box_size.y	= 53 // Height
+	}
+	base.Character.TailsAI.Init()
 }
 
 //# address-hook(0x010294) end(0x010364)

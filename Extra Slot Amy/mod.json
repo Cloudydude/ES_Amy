@@ -37,6 +37,18 @@
 				}
 			},
 			{
+				"InternalName": "Hammer Trail",
+				"DisplayName": "Hammer Trail",
+				"Variable": "Amy_HammerTrail",
+				"DefaultValue": "0",
+				"Category": "Appearance",				
+				"Options":
+				{
+					"0": "Off",
+					"1": "On"
+				}
+			},
+			{
 				"InternalName": "Palette",
 				"DisplayName": "Palette",
 				"Variable": "AmyPalette",
@@ -79,19 +91,19 @@
 				}
 			},
 			{
-				"InternalName": "Amy super pallete",
-				"DisplayName": "Amy super pallete",
+				"InternalName": "Amy Super Pallete",
+				"DisplayName": "Super Pallete",
 				"Variable": "Amy_Super_Pallete",
 				"DefaultValue": "0",
 				"Category": "Super Palette",				
 				"Options":
 				{
-					"0": "Pink",
-					"1": "Gold"
+					"0": "Main Color",
+					"1": "Super/Hyper Sonic"
 				}
 			},
 			{
-				"InternalName": "Amy super glow",
+				"InternalName": "Amy Super Glow",
 				"DisplayName": "Super/Hyper Glow",
 				"Variable": "Amy_Glow",
 				"DefaultValue": "1",
@@ -115,22 +127,10 @@
 				}
 			},
 			{
-				"InternalName": "Amy Expanded Hyper palette",
-				"DisplayName": "Use Hyper Sonic's Palette",
-				"Variable": "Amy_EXPAL",
-				"DefaultValue": "1",
-				"Category": "Super Palette",				
-				"Options":
-				{
-					"0": "Off",
-					"1": "On"
-				}
-			},
-			{
-				"InternalName": "Rotate",
-				"DisplayName": "Full Rotation",
+				"InternalName": "Amy Rotate",
+				"DisplayName": "Smooth Sprite Rotation",
 				"Variable": "Amy_Rotate",
-				"Category": "Misc.",
+				"Category": "Appearance",
 				"DefaultValue": "0",
 				"Options":
 				{
@@ -138,6 +138,69 @@
 					"1": "On"
 				}
 			},
+			{
+				"InternalName": "Amy Display",
+				"DisplayName": "Enable Custom Banner",
+				"Variable": "Amy_Custom_Banner",
+				"DefaultValue": "1",
+				"Category": "Zone Banner",		
+				"Options":
+				{
+					"0": "No",
+					"1": "Yes"
+				}
+			},
+			{
+				"InternalName": "Amy Banner Text",
+				"DisplayName": "Banner Text",
+				"Variable": "Amy_Banner_Text",
+				"DefaultValue": "1",
+				"Category": "Zone Banner",				
+				"Options":
+				{
+					"0": "DA Garden",
+					"1": "Sonic 3 A.I.R",
+					"2": "Sonic 3",
+					"3": "Sonic & Knuckles",
+					"4": "Sonic 3 & Knuckles"
+				}
+			},
+			{
+				"InternalName": "Amy Banner Display",
+				"DisplayName": "Show Banner in DDZ",
+				"Variable": "Display_Amy_Banner",
+				"DefaultValue": "0",
+				"Category": "Zone Banner",		
+				"Options":
+				{
+					"0": "Yes",
+					"1": "No"
+				}
+			},
+			{
+				"InternalName": "Amy Zone Banner",
+				"DisplayName": "DA Garden Zone Banner",
+				"Variable": "Amy_Zone_Banner",
+				"DefaultValue": "0",
+				"Category": "Zone Banner",				
+				"Options":
+				{
+					"0": "Default",
+					"1": "DA Garden"
+				}
+			},
+			{
+				"InternalName": "Unique Amy speed shoes",
+				"DisplayName": "Speed Shoes Icon",
+				"Variable": "Amy_Speed_Shoes",
+				"DefaultValue": "0",
+				"Category": "Misc.",				
+				"Options":
+				{
+					"0": "Unique",
+					"1": "Default"
+				}
+			}
 		]
 	}
 }

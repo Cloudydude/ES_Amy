@@ -12,7 +12,7 @@ function void fn01a170()
 global bool Amy_Super_Pallete
 global bool Amy_Glow
 global bool Amy_Flash
-global bool Amy_EXPAL
+// global bool Amy_EXPAL
 
 function void SuperandHyperPalette_Amy(u32 AmyColor1, u32 AmyColor2, u32 AmyColor3)
 {
@@ -39,7 +39,7 @@ function void SuperandHyperPalette_Amy(u32 AmyColor1, u32 AmyColor2, u32 AmyColo
 
 		// Load modded Super palette
 		u8 line = 5
-		if (isHyperEffect && Amy_EXPAL)
+		if (isHyperEffect && Amy_Super_Pallete)
 		{
 			// Hyper color cycle (if mod supports it)
 			line = 6 + super.palettefx.frame / 18
@@ -60,11 +60,18 @@ function void SuperandHyperPalette_Amy(u32 AmyColor1, u32 AmyColor2, u32 AmyColo
 
 			u32 rgba = u32[0x800000 + i * 4]
 			u16[dest + i * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
-			if (super.active.tails == 1 && Amy_Super_Pallete)
+			if (AmyCornGold())
 			{
-				u16[dest + 2 * 2] = AmyColor1
-				u16[dest + 2 * 3] = AmyColor2
-				u16[dest + 2 * 4] = AmyColor3
+				if (outro.ending_type == 2 || (global.zone_act == 0x0c00 && global.super_emeralds >= 7))
+				{
+					// nothing
+				}
+				else
+				{
+					u16[dest + 2 * 2] = AmyColor1
+					u16[dest + 2 * 3] = AmyColor2
+					u16[dest + 2 * 4] = AmyColor3
+				}
 			}
 		}
 
@@ -131,6 +138,11 @@ function void AmyGoldpalette()
 	}
 }
 
+function bool AmyCornGold()
+{
+	return (Amy_Super_Pallete && (super.active.tails == 1 || (global.zone == 0x0d && outro.ending_type == 0)))
+}
+
 function void UpdatePaletteEffects.SuperForm.moddingVersion(u8 characterVersion)
 {
 	if (global.xtrachar != 3)
@@ -139,7 +151,8 @@ function void UpdatePaletteEffects.SuperForm.moddingVersion(u8 characterVersion)
 		return
 	}
 
-	AmyGoldpalette()
+	if (AmyCornGold())
+		AmyGoldpalette()
 
 	if (super.palettefx.state & 0x80)
 	{
@@ -170,7 +183,7 @@ function void UpdatePaletteEffects.SuperForm.moddingVersion(u8 characterVersion)
 
 			// Load modded Super palette
 			u8 line = 5
-			if (isHyperEffect && Amy_EXPAL)
+			if (isHyperEffect && Amy_Super_Pallete)
 			{
 				// Hyper color cycle (if mod supports it)
 				line = 7
@@ -192,11 +205,18 @@ function void UpdatePaletteEffects.SuperForm.moddingVersion(u8 characterVersion)
 
 				u32 rgba = u32[0x800000 + i * 4]
 				u16[dest + i * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
-				if (super.active.tails == 1 && Amy_Super_Pallete)
+				if (AmyCornGold())
 				{
-					u16[dest + 2 * 2] = AmyColor1
-					u16[dest + 2 * 3] = AmyColor2
-					u16[dest + 2 * 4] = AmyColor3
+					if (outro.ending_type == 2 || (global.zone_act == 0x0c00 && global.super_emeralds >= 7))
+					{
+						// nothing
+					}
+					else
+					{
+						u16[dest + 2 * 2] = AmyColor1
+						u16[dest + 2 * 3] = AmyColor2
+						u16[dest + 2 * 4] = AmyColor3
+					}
 				}
 			}
 

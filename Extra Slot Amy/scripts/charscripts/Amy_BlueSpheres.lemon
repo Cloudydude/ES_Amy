@@ -269,3 +269,16 @@ function void SpecialStage()
 			break
 	}
 }
+
+// Blue Spheres results screen
+//# address-hook(0x02ec80) end(0x02eca6)
+function void fn02ec80()
+{
+	if (global.xtrachar == 3)
+	{
+		D0 = 0x08
+		D1 = 2
+		return
+	}
+	base.fn02ec80()
+}

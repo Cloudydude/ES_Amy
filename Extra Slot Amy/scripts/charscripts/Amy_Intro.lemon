@@ -68,7 +68,7 @@ function void fn063446()
 
 function void initializeMainGame()
 {
-	if (global.xtrachar != 3 || DAGardenTimeAttackForAmy() || System.getGlobalVariableValueByName("original_mode"))
+	if (global.xtrachar != 3 || DAGardenTimeAttackForAmy() || System.getGlobalVariableValueByName("original_mode") || global.zone_act != 0x0000)
 	{
 		base.initializeMainGame()
 		return
@@ -967,6 +967,23 @@ function void DAGar.fn01c4d0()
 	}
 }
 
+//# address-hook(0x0634ca) end(0x063524)
+function void fn0634ca()
+{
+	base.fn0634ca()
+	if (global.xtrachar == 3)
+		objA0.countdown_value = 0x180 // Countdown before the bomb drops in
+}
+
+
+//# address-hook(0x0637ec) end(0x063840)
+function void fn0637ec()
+{
+	base.fn0637ec()
+	if (global.xtrachar == 3)
+		objA0.countdown_value = 50 // Countdown before the bomb goes off
+}
+
 // Game starts at sea level
 //# address-hook(0x04f906) end(0x04f90e)
 function void InitLevelTiles.AIZ1()
@@ -983,6 +1000,8 @@ function void InitLevelTiles.AIZ1()
 		return
 	}
 
+	Init.Dwayne()
+
 	//AIZ1.ChangeBackgroundForKnuckles()
 
 	Level.GetCameraPosition()
@@ -996,7 +1015,55 @@ function void InitLevelTiles.AIZ1()
 #endif
 }
 
-//Make sure the sky is behind he palm trees
+global u16 cardposition_x
+global u16 cardposition_y
+
+// function u8 Randomnum(u8 min, u8 max)
+// {
+// 	u8 difference = ((max+1) - min) + min
+// 	u8 Rand = ((System.rand() % difference))
+// 	return (Rand)
+// }
+
+//# address-hook(0x063562) end(0x063588)
+function void fn063562()
+{
+	base.fn063562()
+	u16 offset_x = 0
+	u16 offset_y = 0
+	if (global.xtrachar == 3 && (u8[0xfffffab8] & 0x02) != 0)
+	{
+		for (u8 i = 0; i < 0x06; ++i)
+		{
+			if (allocDynamicObjectStd()) // Tarot cards
+			{
+				objA1.update_address = 0x2042F0
+				objA1.sprite_priority = 0x080
+				u8[A1 + 0x04] = (render_flag.WORLD)
+				objA1.subtype2c = 0x06
+
+				objA1.velocity.x = -0x100
+				objA1.velocity.y = -0x150
+
+				if (i == 1)
+					offset_x = 4
+				else if (i == 2)
+					offset_x = -4
+				else if (i == 3)
+					offset_x = 10
+				else if (i == 4)
+					offset_y = 5
+				else if (i == 5)
+					offset_y = -3
+
+				objA1.position.x.u16 = cardposition_x - offset_x
+				objA1.position.y.u16 = cardposition_y - offset_y
+			}
+		}
+	}
+}
+
+//Make sure the sky is behind the palm trees
 //# address-hook(0x01c550) end(0x01c5c4)
 function void fn01c550()
 {
@@ -1050,8 +1117,44 @@ function void fn01c550()
 #endif
 }
 
+function void Init.Dwayne()
+{
+	if (allocDynamicObjectStd()) // Dwayne
+    {
+        objA1.update_address = 0x2042F0
+		if (isDAGarden() && !System.getGlobalVariableValueByName("original_mode"))
+		{
+			objA1.position.x.u16 = 0x0366
+			objA1.position.y.u16 = 0x0228
+		}
+		else if (Game.getSetting(SETTING_LEVELLAYOUTS) == 2)
+		{
+			objA1.position.x.u16 = 0x17e6
+        	objA1.position.y.u16 = 0x0128
+		}
+		else
+		{
+			objA1.position.x.u16 = 0x13f5
+			objA1.position.y.u16 = 0x0428
+		}
+		cardposition_x = objA1.position.x.u16
+		cardposition_y = (objA1.position.y.u16 - 11)
+        objA1.sprite_attributes = 0x04c4
+		objA1.sprite_priority = 0x080
+        u8[A1 + 0x04] = (render_flag.WORLD)
+        objA1.subtype2c = 0x04
+
+		objA1.hitbox_extends.x = 0x10
+		objA1.hitbox_extends.y = 0x08
+		objA1.box_size.x = 0x0e
+		objA1.box_size.y = 0x08
+    }
+}
+
+
 function void DAGar.InitAIZact1Tiles()
 {
+	Init.Dwayne()
 	if (checkpoint.number == 0)
 	{
 		move_area.left = 0x0200	// normally 0x1680. Going further left loads some art from the intro.
@@ -1265,6 +1368,6 @@ function void fn063620()
 	if (global.xtrachar == 3)
 	{
 		CheckGroundCollision()
-		objA0.position.y.u16 += D1.s16
+		objA0.position.y.u16 += (D1.s16 + 4)
 	}
 }

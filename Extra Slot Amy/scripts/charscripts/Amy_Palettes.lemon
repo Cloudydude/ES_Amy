@@ -98,11 +98,22 @@ function void ExtraChar.loadSpecialPalettes(u8 xtrachar, u32 targetAddress, u8 p
 function void fn05b2d4()
 {
 	if (isMainCharacter(CHARACTER_KNUCKLES))
-	{
-		u32 targetAddress = 0x8022C0
-		u8 paletteVariant = 0
-		ExtraChar.loadCharacterPalette(3, targetAddress, paletteVariant)
-		Amy_Grays(targetAddress, paletteVariant)
-	}
+		ForceLoadAmypalette()
 	base.fn05b2d4()
+}
+
+function void DataSelect.setup()
+{
+#if EXTRA_SAVE_SLOTS_ACTIVE
+	ForceLoadAmypalette()
+#endif
+	base.DataSelect.setup()
+}
+
+function void ForceLoadAmypalette()
+{
+	u32 targetAddress = 0x8022C0
+	u8 paletteVariant = 0
+	ExtraChar.loadCharacterPalette(3, targetAddress, paletteVariant)
+	Amy_Grays(targetAddress, paletteVariant)
 }

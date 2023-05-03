@@ -14,6 +14,14 @@ define u16 continueHUD.x = 20
 
 define u8 AmyDustControl = u8[0xffffFFDC + ((A0 == 0xffffb000) ? 0 : 0x02)]
 
+global u8 useAmyDashAnim
+
+global bool Amy_Speed_Shoes
+
+define u16	AMY_DASH_ANIM_SPEED	= 0xa00
+define u8	AMY_DASH_ANIM_FRAME_FIRST = 0xbd
+define u8	AMY_DASH_ANIM_FRAME_LAST = 0xc0
+
 function bool ExtraChar.isAmy()
 {
 	if (global.xtrachar == 3) && (u8[0xfffb000 + 0x38] == CHARACTER_TAILS && !competition_mode.active)
@@ -33,6 +41,8 @@ function bool ExtraChar.isP1Amy()
 function void ExtraChar.startup_char3()
 {
 	global.characters = CHARS_TAILS_ALONE
+	if (global.game_mode == 0x1c) // Level Select
+		levelselect.characters = 2
 }
 
 //@ Original function taken from sonic3air_dev/scripts/maingame/hud/hud.lemon
@@ -231,6 +241,8 @@ function u64 ExtraChar.getIconSpriteKey_char3(u8 type)
 		return "monitor_icon_amy"
 	else if (type == 0x02 && Renderer.hasCustomSprite("eggman-lrz-blue-12") && System.getGlobalVariableValueByName("EggmanBlue.disableMonitorReplacement") != 1)
 		return "monitor_icon_eggman"
+	else if (type == 0x04 && !Amy_Speed_Shoes)
+		return "monitor_amy_shoe"
 	else
 		return base.ExtraChar.getIconSpriteKey_char3(type)
 
@@ -302,29 +314,29 @@ function void ExtraChar.drawCharacterSprite_char3()
 
 	if (variant < 2)
 	{
-		if (character == CHARACTER_SONIC && animationSpriteEx == animationSprite)	// Last check is only false if modded scripts made their own changes
-		{
-			// Special handling for Drop Dash & Super Peel-Out
-			if (char.state == char.state.SONIC_DROPDASH)
-			{
-				animationSpriteEx = CHAR_ANIMSPRITE_SONIC_DROPDASH + ((level.framecounter >> 1) & 0x01)
-			}
-			else if (!super.active && animationSprite >= 0x21 && animationSprite <= 0x30)
-			{
-				if (sonic.fastrunanim.timer > 0)
-				{
-					animationSpriteEx = CHAR_ANIMSPRITE_SONIC_PEELOUT + (level.framecounter & 0x03)
+		// if (character == CHARACTER_SONIC && animationSpriteEx == animationSprite)	// Last check is only false if modded scripts made their own changes
+		// {
+		// 	// Special handling for Drop Dash & Super Peel-Out
+		// 	if (char.state == char.state.SONIC_DROPDASH)
+		// 	{
+		// 		animationSpriteEx = CHAR_ANIMSPRITE_SONIC_DROPDASH + ((level.framecounter >> 1) & 0x01)
+		// 	}
+		// 	else if (!super.active && animationSprite >= 0x21 && animationSprite <= 0x30)
+		// 	{
+		// 		if (sonic.fastrunanim.timer > 0)
+		// 		{
+		// 			animationSpriteEx = CHAR_ANIMSPRITE_SONIC_PEELOUT + (level.framecounter & 0x03)
 
-					if (!Game.getSetting(SETTING_SMOOTH_ROTATION))
-					{
-						angle = (animationSprite - 0x21) / 4 * 0xe0
-						if ((char.flags & char.flag.FACING_LEFT) == (global.inv_gravity == 0))
-							angle = -angle
-						animationSprite = 0x21 + (animationSprite - 0x21) % 4
-					}
-				}
-			}
-		}
+		// 			if (!Game.getSetting(SETTING_SMOOTH_ROTATION))
+		// 			{
+		// 				angle = (animationSprite - 0x21) / 4 * 0xe0
+		// 				if ((char.flags & char.flag.FACING_LEFT) == (global.inv_gravity == 0))
+		// 					angle = -angle
+		// 				animationSprite = 0x21 + (animationSprite - 0x21) % 4
+		// 			}
+		// 		}
+		// 	}
+		// }
 
 		if (Game.getSetting(SETTING_SMOOTH_ROTATION))
 		{
@@ -338,8 +350,11 @@ function void ExtraChar.drawCharacterSprite_char3()
 			else if (animationSprite >= 0x21 && animationSprite <= 0x30)
 			{
 				// Running animation
-				animationSprite = 0x21 + (animationSprite - 0x21) % 4
+				// Save untill we have a fast run animation
+				animationSprite = ((useAmyDashAnim && Game.getSetting(SETTING_SUPERFAST_RUNANIM)) ? AMY_DASH_ANIM_FRAME_FIRST : 0x21) + (animationSprite - 0x21) % 4
 				rotationMode = Smooth_ctrl
+				// animationSprite = 0x21 + (animationSprite - 0x21) % 4
+				// rotationMode = Smooth_ctrl
 			}
 			else if (animationSprite >= 0x78 && animationSprite <= 0x7f)
 			{
@@ -347,6 +362,11 @@ function void ExtraChar.drawCharacterSprite_char3()
 				animationSprite = 0x78
 				rotationMode = 2
 			}
+			else if (animationSprite >= AMY_DASH_ANIM_FRAME_FIRST && animationSprite <= AMY_DASH_ANIM_FRAME_LAST)
+			{
+				rotationMode = 2
+			}
+
 			// else if (character == CHARACTER_TAILS && animationSprite >= 0xc3 && animationSprite <= 0xca)
 			// {
 			// 	// Tails' fastest run animation
@@ -455,7 +475,9 @@ function void ExtraChar.drawCharacterSprite_char3()
 				angle = (animationSprite - 0x21) / 4 * 0xe0 * ((global.inv_gravity) ? -1 : 1)
 				if (char.flags & char.flag.FACING_LEFT)
 					angle = -angle
-				animationSprite = 0x21 + (animationSprite - 0x21) % 4
+				// Save untill we have a fast run animation
+				animationSprite = ((useAmyDashAnim && Game.getSetting(SETTING_SUPERFAST_RUNANIM)) ? AMY_DASH_ANIM_FRAME_FIRST : 0x21) + (animationSprite - 0x21) % 4
+				// animationSprite = 0x21 + (animationSprite - 0x21) % 4
 			}
 			//Hanging in AIZ
 			else if (animationSprite >= 0x78 && animationSprite <= 0x7f)
@@ -475,18 +497,22 @@ function void ExtraChar.drawCharacterSprite_char3()
 			}
 		}
 
-		if (key == 0 && animationSpriteEx >= 0x100)
-		{
-			// Special handling for Drop Dash & Super Peel-Out
-			if (animationSpriteEx >= CHAR_ANIMSPRITE_SONIC_PEELOUT)
-			{
-				key = stringformat("sonic_peelout_%d", animationSpriteEx - CHAR_ANIMSPRITE_SONIC_PEELOUT)
-			}
-			else
-			{
-				key = stringformat("sonic_dropdash_%d", animationSpriteEx - CHAR_ANIMSPRITE_SONIC_DROPDASH)
-			}
-		}
+		//During the sequence when she's falling from space
+		if (objA0.state == char.state.RUNNING && (animationSprite >= 0x21 && animationSprite <= 0x30) && global.zone == 0x0d && Game.getSetting(SETTING_SUPERFAST_RUNANIM))
+			animationSprite = AMY_DASH_ANIM_FRAME_FIRST + (animationSprite - 0x21) % 4
+
+		// if (key == 0 && animationSpriteEx >= 0x100)
+		// {
+		// 	// Special handling for Drop Dash & Super Peel-Out
+		// 	if (animationSpriteEx >= CHAR_ANIMSPRITE_SONIC_PEELOUT)
+		// 	{
+		// 		key = stringformat("sonic_peelout_%d", animationSpriteEx - CHAR_ANIMSPRITE_SONIC_PEELOUT)
+		// 	}
+		// 	else
+		// 	{
+		// 		key = stringformat("sonic_dropdash_%d", animationSpriteEx - CHAR_ANIMSPRITE_SONIC_DROPDASH)
+		// 	}
+		// }
 		if (isPlayer1)
 			timeattack.animSpriteEx = animationSpriteEx
 
@@ -505,6 +531,34 @@ function void ExtraChar.drawCharacterSprite_char3()
 		}
 	}
 
+	if (char.state == 0x31)
+	{
+		if (char.animation.timer > 8)
+		{
+			char.animation.timer = 8
+		}
+		if (char.animation.timer == 0)
+		{
+			char.animation.timer = 8
+			++char.animation.frame
+		}
+		if (char.velocity.y >= 0)
+		{
+			char.state = char.state.RUNNING
+			char.animation.frame = 0
+		}
+		if (char.animation.frame >= 5)
+		{
+			char.animation.frame = 0
+		}
+		key = stringformat("ESamy_springtwirl_%d", char.animation.frame)
+		if (char.animation.timer > 6)
+		{
+			char.animation.timer = 6
+		}
+	}
+
+	// animation fix for SSZ
 	if ((objA0.animation.sprite == 0xe5 || objA0.animation.sprite == 0xe9) && global.zone_act == 0x0a00)
 		py += 3
 
@@ -739,7 +793,7 @@ function void ExtraChar.onCollisionWithDynamicObject_char3()
 		}
 	#endif
 
-		if (!attacking || tails.carrying) // last little bit here is so that Amy doesn't hurt Eggman while shes hanging onto the balloon
+		if (!attacking || (tails.carrying && !super.active.tails)) // last little bit here is so that Amy doesn't hurt Eggman while shes hanging onto the balloon, when she's not super
 		{
 			// The balloon shouldn't hurt anyone
 			bool isThreat = true
@@ -928,21 +982,187 @@ function void ExtraChar.onCollisionWithDynamicObject_char3()
 	}
 	else if (D1.u8 == 0x80)
 	{
-
-		// We don't want the value to get set when Amy can't get hurt
-		if (!super.active && (char.bonus_effect & char.bonus.INVINCIBLE) == 0 && u8[A0 + 0x34] == 0)
+		if (AmyHammerDeflect() && (char.state == char.state.ROLLING && char.double_jump_state == 1))
 		{
-			if (!(objA1.flags2b & char.bonus.SHIELD_LIGHTNING) && !(objA1.flags2b & char.bonus.SHIELD_FIRE) && !(u8[A1 + 0x2b] & char.bonus.DEFLECTABLE)) // Makes sure the dust can still appear if Amy has an elemental shield
-				AmyDustControl = 1 // used to disable dust when colliding with a harmful object.
+			deflectProjectile()
+			playSound(0xb5)
 		}
-		// Harmful object
-		Character.OnThreatCollision()
+		else
+		{
+			// We don't want the value to get set when Amy can't get hurt
+			if (!super.active && (char.bonus_effect & char.bonus.INVINCIBLE) == 0 && u8[A0 + 0x34] == 0)
+			{
+				if (!(objA1.flags2b & char.bonus.SHIELD_LIGHTNING) && !(objA1.flags2b & char.bonus.SHIELD_FIRE) && !(u8[A1 + 0x2b] & char.bonus.DEFLECTABLE)) // Makes sure the dust can still appear if Amy has an elemental shield
+					AmyDustControl = 1 // used to disable dust when colliding with a harmful object.
+			}
+			if (AmyBreakObjects())
+				return
+			// Harmful object
+			Character.OnThreatCollision()
+		}
 	}
 	else  // D1.u8 == 0xc0
 	{
 		// Other interactable object
 		fn0103ba()
 	}
+}
+
+function bool AmyBreakObjects()
+{
+	// Big Ice spikes
+	if (objA1.update_address == 0x085140 && objA1.subtype2c == 0)
+	{
+		if (char.state == char.state.ROLLING && char.double_jump_state == 1)
+		{
+			playSound(0x80)
+			
+			A2 = A1
+			AmyIceBreaker()
+			A1 = A2
+			
+			UnloadObjectA1()
+			
+			return true
+		}
+	}
+	return base.AmyBreakObjects()
+}
+
+function void AmyIceBreaker()
+{
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x00
+		objA1.position.x.u16 = u16[A2 + 0x10] - 12
+		objA1.position.y.u16 = u16[A2 + 0x14] - 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x02
+		objA1.position.x.u16 = u16[A2 + 0x10] - 4
+		objA1.position.y.u16 = u16[A2 + 0x14] - 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x04
+		objA1.position.x.u16 = u16[A2 + 0x10] + 4
+		objA1.position.y.u16 = u16[A2 + 0x14] - 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x06
+		objA1.position.x.u16 = u16[A2 + 0x10] + 12
+		objA1.position.y.u16 = u16[A2 + 0x14] - 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x08
+		objA1.position.x.u16 = u16[A2 + 0x10] - 12
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x0a
+		objA1.position.x.u16 = u16[A2 + 0x10] - 4
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x0c
+		objA1.position.x.u16 = u16[A2 + 0x10] + 4
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x0e
+		objA1.position.x.u16 = u16[A2 + 0x10] + 12
+		objA1.position.y.u16 = u16[A2 + 0x14]
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x10
+		objA1.position.x.u16 = u16[A2 + 0x10] - 12
+		objA1.position.y.u16 = u16[A2 + 0x14] + 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x12
+		objA1.position.x.u16 = u16[A2 + 0x10] - 4
+		objA1.position.y.u16 = u16[A2 + 0x14] + 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x14
+		objA1.position.x.u16 = u16[A2 + 0x10] + 4
+		objA1.position.y.u16 = u16[A2 + 0x14] + 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+	
+	if (allocDynamicObjectStd())
+	{
+		objA1.update_address = 0x08a8dc
+		objA1.subtype2c = 0x16
+		objA1.position.x.u16 = u16[A2 + 0x10] + 12
+		objA1.position.y.u16 = u16[A2 + 0x14] + 8
+		objA1.render_flags = u8[A2 + 0x04]
+	}
+}
+
+// If you want to implement any custom objects that Amy should deflect
+function bool AmyHammerDeflect()
+{
+	if (objA1.update_address == 0x034518) // Relief arrows
+		return true
+	else if (objA1.update_address == 0x075b34) // Hey Ho's logs
+	{
+		objA1.value3a = 0 // no more bouncing logs, hopefully // yeah it works cloud - haz
+		return true
+	}
+
+	return base.AmyHammerDeflect()
+}
+
+// fix for log wrapping vertically
+//# address-hook(0x075b34) end(0x075b5e)
+function void fn075b34()
+{
+	bool outOfVerticalBounds = (objA0.position.y.u16 < camera.position.y.u16 - 0x20) || (objA0.position.y.u16 > camera.position.y.u16 + getScreenHeight() + 0x20)
+	if (outOfVerticalBounds)
+		UnloadObject()
+		
+	base.fn075b34()
 }
 
 function void ExtraChar.onThreatCollision_char3()
@@ -1204,6 +1424,7 @@ function bool updateDebugModeInput(bool playingAsTails)
 //# address-hook(0x01365c) end(0x0136b8)
 function void Character.BaseUpdate.Tails()
 {
+//	System.writeDisplayLine(stringformat("char.animation.sprite = %x", char.animation.sprite))
 	if (global.xtrachar != 3)
 	{
 		base.Character.BaseUpdate.Tails()
@@ -1217,9 +1438,13 @@ function void Character.BaseUpdate.Tails()
 // Give Amy a Super and Hyper form
 function u32 Game.getSetting(u32 settingId)
 {
-	if (global.xtrachar == 3 && settingId == SETTING_HYPER_TAILS)
-		return 1
-
+	if (global.xtrachar == 3)
+	{
+		if (settingId == SETTING_HYPER_TAILS)
+			return 1
+		else if (settingId == SETTING_SUPER_PEELOUT)
+			return 0
+	}
 	return base.Game.getSetting(settingId)
 }
 
@@ -1305,8 +1530,15 @@ function void Character.Initialization.Tails()
 
 global u8 PopTimer
 
+// Blue glasses Eggman compatibility 
+function void EggmanBlue.decreaseTimer()
+{
+	base.EggmanBlue.decreaseTimer()
+}
+
 function void Character.BaseUpdate.Amy()
 {
+	EggmanBlue.decreaseTimer()
 	// Fix so that Debug mode works with Amy during the MGZ boss
 	A4 = 0xfffffec0		// Address of Tails' speed caps
 	A5 = 0xffffee2e		// Address of camera.yoffset.tails
@@ -1335,16 +1567,16 @@ function void Character.BaseUpdate.Amy()
 		if (char.state == char.state.SPINDASH)
 			char.animation.sprite = (0x4B + char.animation.sprite)
 
-		// This is probably gonna get scrapped at somepoint
-		if ((char.animation.sprite <= 32 || char.animation.sprite == 0x90) && char.state == char.state.RUNNING) // 6 frame walk
-		{
-			// The first and last animation frames are skipped
-			if (char.animation.frame == 1 || char.animation.frame == 8)
-			{
-				char.animation.frame = 2
-				char.animation.sprite = (char.animation.sprite >= 25 && char.animation.sprite <= 32) ? 25 : (char.animation.sprite >= 17 && char.animation.sprite <= 24) ? 17 : (char.animation.sprite >= 9 && char.animation.sprite <= 16) ? 9 : 1
-			}
-		}
+		// R.I.P.
+		// if ((char.animation.sprite <= 32 || char.animation.sprite == 0x90) && char.state == char.state.RUNNING) // 6 frame walk
+		// {
+		// 	// The first and last animation frames are skipped
+		// 	if (char.animation.frame == 1 || char.animation.frame == 8)
+		// 	{
+		// 		char.animation.frame = 2
+		// 		char.animation.sprite = (char.animation.sprite >= 25 && char.animation.sprite <= 32) ? 25 : (char.animation.sprite >= 17 && char.animation.sprite <= 24) ? 17 : (char.animation.sprite >= 9 && char.animation.sprite <= 16) ? 9 : 1
+		// 	}
+		// }
 
 		ExtraChar.amyHammerBounceHandler()
 	}
@@ -1368,6 +1600,8 @@ function void Character.BaseUpdate.Amy()
 	}
 }
 
+global bool Amy_HammerTrail
+
 function void ExtraChar.amyHammerBounceHandler()
 {
 	u8 PlayerInput = (A0 == 0xffffb000) ? control.player1.state : control.player2.state
@@ -1389,7 +1623,7 @@ function void ExtraChar.amyHammerBounceHandler()
 		//playSound(0x8c)
 		HammerSnds2()
 
-		if !(competition_mode.active)
+		if (!competition_mode.active && Amy_HammerTrail)
 			ExtraChar.amySpawnHammerSwing()
 	}
 }
@@ -1399,6 +1633,12 @@ function void UpdateTailsAnimation()
 {
 	if (global.xtrachar == 3 && A0 == 0xffffb000)
 	{
+		if (char.state == 0x36)
+		{
+			base.UpdateTailsAnimation()
+			return
+		}
+
 		if (char.state != char.state.former)
 		{
 			char.state.former = char.state
@@ -1572,6 +1812,8 @@ function void updateSonicAnimationRunning()
 			// Tails' running animation
 			A1 = 0x015b0e
 			D3.u8 = D0.u8 * 2
+
+			useAmyDashAnim = (D2.u16 >= AMY_DASH_ANIM_SPEED)
 		}
 		// else
 		// {
@@ -1626,15 +1868,12 @@ function string ExtraChar.getCharacterName(u8 global.xtrachar)
 	return base.ExtraChar.getCharacterName(global.xtrachar)
 }
 
-global u8 hammerbounceframe 
-
 // This function is here only for script mods that want to change or extend the character sprites
 function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationSpriteEx)
 {
+	u8 hammerbounceframe = 0
 	if (global.xtrachar != 3)
-	{
 		return base.Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
-	}
 
 	if (A0 == 0xffffb04a && !bluespheres.xtrachar)
 	{
@@ -1649,17 +1888,25 @@ function u64 Standalone.getModdedAnimationSpriteKey(u8 character, u16 animationS
 		return key
 	}
 
-	if hammerbounceframe > 6
-		hammerbounceframe = 0
-	else
-		hammerbounceframe++
-
+	if !System.getGlobalVariableValueByName("SevenForce.TriggerTitleTimer")
+		hammerbounceframe = ((global.framecounter >> 0) % (8))
+	
 	if (tails.carrying) // Amy hanging onto the balloon
 		return "character_amy_balloon_hang"
+	else if (char.state == char.state.DIED_GREY && Mods.isModActive("Burnt Death Sprites"))
+		return "ThisGirlIsOnFire"
 	else if (char.double_jump_state != 0) && (char.state == char.state.ROLLING) && (!IsAmyUsingShield)
 		return stringformat("character_amy_hammerbounce_%d", hammerbounceframe)
 	else
 		return base.Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
+}
+
+function string getESCharacterFallSpriteKey(u8 character, u8 extrachar)
+{
+	if (extrachar == 3 && character == CHARACTER_TAILS && A0 == 0xffffb000)
+		return "character_amy_fall"
+
+	return base.getESCharacterFallSpriteKey(character, extrachar)
 }
 
 //# address-hook(0x00fe8e) end(0x00ff04)
@@ -1891,7 +2138,7 @@ function void SpringVertical.updateInternal(bool flipY)
 	DrawOrUnloadObject()
 }
 
-#if GAMEAPP <= 0x22051500
+#if GAMEAPP <= 0x23032500
 // Fix for LBZ act 1 where the snow particles don't appear at the start
 //# address-hook(0x039ad2) end(0x039b64)
 function void fn039ad2()
@@ -2025,4 +2272,70 @@ function void fn04e24c()
 		base.fn04e24c()
 		return
 	}
+}
+
+function bool Stone.canFightStoneGapsule()
+{
+	if (global.xtrachar == 3)
+		return true
+	
+	return base.Stone.canFightStoneGapsule()
+}
+
+//@ Function taken from sonic3air_dev/scripts/menus/dataselect.lemon
+function bool fn00d458()
+{
+    bool completedSlot = u8[A1] != 0x00 && u8[A1] != 0x80
+    bool controlCheck = (control.pad1.pressed & CONTROL_DOWN) || (control.pad1.pressed & CONTROL_UP)
+
+	if (Mods.isModActive("Extra Save Slots") && System.getGlobalVariableValueByName("ESS_save_entered") == 0)
+		return base.fn00d458()
+    
+    if (u8[A0 + 0x05] == 0x03 && completedSlot && controlCheck)
+    { // This makes it so that you don't see Amy's clear portrait in the zone icons while picking a level
+		u32 backupA0 = A0
+        D6 = 0x0c
+        if (u8[A0 + 0x8a] != 0x01)
+        {
+            u16[A0 + 0x36] = 0x0d
+            u8[A0 + 0x8a] = 0x01
+        }
+        
+        // Zone select
+        D1.u16 = u16[A0 + 0x36]
+        if (control.pad1.pressed & CONTROL_DOWN)
+        {
+            playSound(0x5b)
+            --D1.u16
+            
+            if (D1.s16 < 0x00)
+                D1.u16 = D6.u16
+        }
+        else if (control.pad1.pressed & CONTROL_UP)
+        {
+            playSound(0x5b)
+            ++D1.u16
+            
+            if (D1.u16 > D6.u16)
+                D1 = 0x00
+        }
+        u16[A0 + 0x36] = D1.u16
+        waitForNextFrame()
+		DataSelect.drawCustomPlanes()
+
+		A0 = backupA0
+        
+        // Return the Base function
+        return base.fn00d458()
+    }
+    else 
+        return base.fn00d458() // Return the Base function
+}
+
+//Fix for DDZ when transforming
+//# address-hook(0x08160a) end(0x081676)
+function void fn08160a()
+{
+	super.palettefx.timer.tails = 0x0f
+	base.fn08160a()
 }

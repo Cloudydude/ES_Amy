@@ -427,3 +427,13 @@ function void Character.GettingHurt()
 		}
 	}
 }
+
+//Compatibility with sepereate super and hyper sprites
+function u64 SeparateSprites.getSpriteKeyForCharacterRendering(u8 character, u8 animationSprite, u16 animationSpriteEx)
+{
+    u64 key = Standalone.getModdedAnimationSpriteKey(character, animationSpriteEx)
+   	if (global.xtrachar == 3 && A0 == 0xffffb04a && !competition_mode.active)
+        return key
+
+    return base.SeparateSprites.getSpriteKeyForCharacterRendering(character, animationSprite, animationSpriteEx)
+}

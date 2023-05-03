@@ -302,6 +302,8 @@ function void Character.cancelSuperTransformation()
 {
 	if (A0 == 0xffffb000)
 	{
+		if (global.xtrachar == 3)
+			Amy.KillScreen = false
 		base.Character.cancelSuperTransformation()
 	}
 }

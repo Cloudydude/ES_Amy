@@ -145,13 +145,6 @@ function void Character.UpdateTailsRollingInAir()
 	base.Character.UpdateTailsRollingInAir()
 }
 
-function void Character.cancelSuperTransformation()
-{
-	if (global.xtrachar == 3 && A0 == 0xffffb000)
-		Amy.KillScreen = false
-	base.Character.cancelSuperTransformation()
-}
-
 global bool HyperAmyDontFlash
 
 function void Character.LandingOnGroundResetState()

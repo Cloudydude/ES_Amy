@@ -2358,3 +2358,13 @@ function void fn064daa()
 	}
 	base.fn064daa()
 }
+
+// Fix for MHZ act 2 boss
+//# address-hook(0x0768d2) end(0x0768fc)
+function void fn0768d2()
+{
+	base.fn0768d2()
+	objA0.update_address = 0x0768fe
+	u16[0xffffeec6] = 0x55
+	player1.control_override = 0xff
+}

@@ -189,10 +189,10 @@
 	"character_amy_0xbc":  { "File": "character_amy.bmp", "Rect": "532,540,40,24", "Center": "17,12" },
 
 	// Dash Animation
-	"character_amy_0xbd":  { "File": "character_amy.bmp", "Rect": "54,609,34,31", "Center": "17,15" },
-	"character_amy_0xbe":  { "File": "character_amy.bmp", "Rect": "96,609,34,31", "Center": "17,15" },
-	"character_amy_0xbf":  { "File": "character_amy.bmp", "Rect": "141,609,35,31", "Center": "18,15" },
-	"character_amy_0xc0":  { "File": "character_amy.bmp", "Rect": "189,609,35,31", "Center": "18,15" },
+	"character_amy_0xbd":  { "File": "character_amy.bmp", "Rect": "52,608,36,32", "Center": "17,16" },
+	"character_amy_0xbe":  { "File": "character_amy.bmp", "Rect": "91,608,39,32", "Center": "20,16" },
+	"character_amy_0xbf":  { "File": "character_amy.bmp", "Rect": "139,608,37,32", "Center": "18,16" },
+	"character_amy_0xc0":  { "File": "character_amy.bmp", "Rect": "186,608,38,32", "Center": "19,16" },
 
 	"character_amy_0xc1":  { "File": "character_amy.bmp", "Rect": "4,584,40,32", "Center": "19,14" },
 	"character_amy_0xc2":  { "File": "character_amy.bmp", "Rect": "52,584,40,32", "Center": "21,19" },
@@ -223,7 +223,10 @@
 	"character_amy_0xdb":  { "File": "character_amy.bmp", "Rect": "536,672,32,48", "Center": "15,24" },
 	"character_amy_0xdc":  { "File": "character_amy.bmp", "Rect": "584,672,32,48", "Center": "16,24" },
 	"character_amy_0xdd":  { "File": "character_amy.bmp", "Rect": "632,672,32,48", "Center": "16,25" },
-	"character_amy_0xde":  { "File": "character_amy.bmp", "Rect": "632,628,32,40", "Center": "16,20" },
+	
+	//Drowning sprite
+	"character_amy_0xde":  { "File": "character_amy.bmp", "Rect": "342,437,28,39", "Center": "14,19" },
+
 	"character_amy_0xdf":  { "File": "character_amy.bmp", "Rect": "680,628,32,40", "Center": "16,20" },
 	"character_amy_0xe0":  { "File": "character_amy.bmp", "Rect": "732,632,24,32", "Center": "12,16" },
 	"character_amy_0xe1":  { "File": "character_amy.bmp", "Rect": "12,676,24,40", "Center": "12,20" },

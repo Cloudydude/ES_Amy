@@ -760,7 +760,7 @@ function bool ExtraChar.updateNormalState_char3()
 //@ Original function taken from sonic3air_dev/scripts/maingame/character/character.lemon
 function void ExtraChar.onCollisionWithDynamicObject_char3()
 {
-	// Example values for u8[A1 + 0x28]:
+	// Example values for objA1.collision_attributes:
 	//  - 0x06, 0x0b, 0x17, 0x1a = Different types of enemies
 	//  - 0x0f		 = Boss enemy
 	//  - 0x18		 = Extended arm of DEZ Chainspike
@@ -773,22 +773,19 @@ function void ExtraChar.onCollisionWithDynamicObject_char3()
 	//  - 0x98, 0x9b = Projectile
 	//  - 0xd8		 = Thrown mushroom, stars over starpost
 
-	D1.u8 = u8[A1 + 0x28] & 0xc0
+	D1.u8 = (objA1.collision_attributes & collision_attributes.flags)
 	if (D1.u8 == 0)
 	{
 		// Collision is an enemy, i.e. is harmful, but can be attacked
 		bool attacking = false
-		if (char.bonus_effect & char.bonus.INVINCIBLE)
-		{
-			attacking = true
-		}
-		else if (char.state == char.state.ROLLING || char.state == char.state.SPINDASH)
+		if (char.bonus_effect & char.bonus.INVINCIBLE || char.state == char.state.ROLLING || char.state == char.state.SPINDASH)
 		{
 			attacking = true
 		}
 	#if STANDALONE
 		else if (Game.getSetting(SETTING_DROPDASH) && char.character == CHARACTER_SONIC && char.state == char.state.SONIC_DROPDASH)
 		{
+			// Count Sonic's drop dash as a rolling state
 			attacking = true
 		}
 	#endif
@@ -882,14 +879,14 @@ function void ExtraChar.onCollisionWithDynamicObject_char3()
 			}
 		}
 	}
-	else if (D1.u8 == 0x40)
+	else if (D1.u8 == collision.flag.ITEM)
 	{
-		D0.u8 = u8[A1 + 0x28] & 0x3f
-		if (D0.u8 != 0x06)
+		D0.u8 = (objA1.collision_attributes & collision_attributes.size)
+		if (D0.u8 != collision.size.16x16)
 		{
 			// Collect ring, but only after 30 invulnerability frames
 			//  -> Remember that the "char.invuln.countdown" timer starts at 120
-			u8 timer = competition_mode.active ? char.invuln.countdown : u8[0xffffb034]
+			u8 timer = competition_mode.active ? char.invuln.countdown : u8[0xffffb000 + 0x34]
 			if (timer < 90)
 			{
 				u8[A1 + 0x05] = 0x04
@@ -899,11 +896,88 @@ function void ExtraChar.onCollisionWithDynamicObject_char3()
 		{
 			// This part seems to be for monitors specifically
 			s16 vy = (global.inv_gravity) ? -char.velocity.y : char.velocity.y
+		#if STANDALONE
+			// Calculate if the player is moving up, specifically relative to the monitor
+			vy = char.velocity.y - objA1.velocity.y
+		#endif
 			bool movingUp = (objA1.render_flags & render_flag.FLIP_Y) ? (vy > 0) : (vy < 0)
+		#if STANDALONE
+			movingUp = (vy < 0)		// Velocity is normalised for inverted gravity anyway, so no need for fancy conditional checks
+
+			// If player and monitor are at different orientations, check if player is moving down instead of up
+			if ((objA1.render_flags & render_flag.FLIP_Y) != (char.render_flags & render_flag.FLIP_Y))
+			{
+				movingUp = !movingUp
+
+				if (char.flags & char.flag.IN_AIR)
+					objA1.flags2a &= ~object.flag.P1_PUSHING
+			}
+
+			movingUp = (movingUp && (abs(char.position.x.u16 - objA1.position.x.u16) < 0x12 || char.state == char.state.ROLLING))		// only bounce at a certain distance, otherwise push the player away when falling, #contributed by GFX32
+		#endif
 			if (movingUp)
 			{
-				if (u8[A1 + 0x2a] & char.flag.IN_AIR)
+			#if STANDALONE
+				if ((objA1.flags2a & object.flag.P1_PUSHING) && (char.flags & char.flag.IN_AIR))
 				{
+					// In S3AIR, do not allow S&K's monitor opening from the side
+					//  -> This is done to be more consistent with other Sonic games, incl. Sonic 1, 2, CD, Mania and even Sonic 3 alone
+					//  -> The first check above tells us if the character is on a side of the monitor
+					//  -> The second one makes sure that you can always ground-based roll into a monitor (see e.g. first invincibility in MHZ 1, when spindashing into it from the right)
+					return
+				}
+				else if (Game.getSetting(SETTING_MONITOR_BEHAVIOR) == 0)
+				{
+					// All you really need for Sonic & Knuckles monitor Behavior. everything else relevant is handled elsewhere
+					char.velocity.y = -char.velocity.y
+				}
+				else
+				{
+					// Improved code to prevent crushing and allow bouncing on ground, #contributed by GFX32
+
+					// If the player is below the monitor, it should bounce.
+					bool isBelow = (char.position.y.u16 > (objA1.position.y.u16 + objA1.hitbox_extends.y))
+
+					if (objA1.render_flags & render_flag.FLIP_Y)
+						isBelow = (char.position.y.u16 < (objA1.position.y.u16 - objA1.hitbox_extends.y))
+
+					// Not when spindashing!
+					if (char.state == char.state.SPINDASH)
+						isBelow = false
+
+					if (isBelow)
+					{
+						// Hit monitor from below, make it fall
+						u8[A1 + 0x3c] = 1
+
+						char.velocity.y = -char.velocity.y
+						objA1.velocity.y = -0x180
+
+						// Calculate how far the monitor is inside the player, then separate them; this attempts to prevent crushing collision on subsequent frames.
+						s16 dy = (objA1.position.y.u16 + objA1.hitbox_extends.y) - (char.position.y.u16 - char.hitbox_extends.y)
+
+						if (objA1.render_flags & render_flag.FLIP_Y)
+							dy = (objA1.position.y.u16 - objA1.hitbox_extends.y) - (char.position.y.u16 + char.hitbox_extends.y)
+
+						// Only push the player when in midair
+						if (char.flags & char.flag.IN_AIR)
+						{
+							dy /= 2
+							char.position.y.u16 += dy
+						}
+						objA1.position.y.u16 -= dy
+
+						if (u8[A1 + 0x3c] == 0)
+							u8[A1 + 0x3c] = 4
+
+						return
+					}
+				}
+			#else
+				if (objA1.flags2a & char.flag.IN_AIR)
+				{
+					// This block is a bit broken due to the above check, and falling monitors can crush the player, and is this really what we want?
+
 					if ((objA1.render_flags & render_flag.FLIP_Y) == 0)
 					{
 						if (char.position.y.u16 - 0x10 < objA1.position.y.u16)
@@ -922,31 +996,7 @@ function void ExtraChar.onCollisionWithDynamicObject_char3()
 
 					return
 				}
-				else
-				{
-				#if STANDALONE
-					if (u8[A1 + 0x2a] & char.flag.PUSHING)
-					{
-						// In S3AIR, do not allow S&K's monitor opening from the side
-						//  -> This is done to be more consistent with other Sonic games, incl. Sonic 1, 2, CD, Mania and even Sonic 3 alone
-						return
-					}
-					// TODO: Unfinished code here -- it works, but the falling monitor can crush the player, and is this really what we want?
-				/*
-					else
-					{
-						// Hit monitor from below, make it fall
-						u8[A1 + 0x3c] = 1
-
-						char.velocity.y = -char.velocity.y
-						objA1.velocity.y = -0x180
-						if (u8[A1 + 0x3c] == 0)
-							u8[A1 + 0x3c] = 4
-						return
-					}
-				*/
-				#endif
-				}
+			#endif
 			}
 
 			if (A0 != 0xffffb000 && competition_mode.active == 0)
@@ -965,22 +1015,38 @@ function void ExtraChar.onCollisionWithDynamicObject_char3()
 			{
 				canOpenMonitor = true
 			}
+			else if (char.state == char.state.SPINDASH)
+			{
+				canOpenMonitor = true
+			}
+			else if (objA1.velocity.y < 0)
+			{
+				// Make monitors break over the player's head at different orientations. #contributed by Dynamic Lemons
+				if ((global.inv_gravity != (objA1.render_flags & render_flag.FLIP_Y) != 0))
+					canOpenMonitor = true
+			}
 		#endif
 			else if (char.character == CHARACTER_KNUCKLES)
 			{
+				// Check if Knuckles glides into the monitor
 				canOpenMonitor = (char.double_jump_state == 1 || char.double_jump_state == 3)
 			}
 
 			if (canOpenMonitor)
 			{
-				// Bounce off
-				char.velocity.y = -char.velocity.y
-				u8[A1 + 0x05] = 4
-				u16[A1 + 0x42] = A0.u16
+			#if STANDALONE
+				if (!movingUp)
+			#endif
+				{
+					// Bounce off
+					char.velocity.y = -char.velocity.y
+				}
+				objA1.base_state = 0x04		// Set monitor state to broken
+				objA1.monitor.character_address = A0.u16		// RAM address of character
 			}
 		}
 	}
-	else if (D1.u8 == 0x80)
+	else if (D1.u8 == collision.flag.THREAT)
 	{
 		if (AmyHammerDeflect() && (char.state == char.state.ROLLING && char.double_jump_state == 1))
 		{
@@ -2346,16 +2412,8 @@ function void fn08160a()
 //# address-hook(0x064daa) end(0x064dca)
 function void fn064daa()
 {
-	if (u8[0xfffffab8] & 0x20)
-	{
-		A2 = 0xffffb000
-		if (u8[A2 + 0x2f] != 0)
-		{
-			u8[A2 + 0x2f] = 0
-			u8[A2 + 0x20] = char.state.ROLLING
-			u8[A2 + 0x40] = 0
-		}
-	}
+	if (u8[0xfffffab8] & 0x20 && global.xtrachar == 3)
+		AmyForceStopBouncing()
 	base.fn064daa()
 }
 
@@ -2364,7 +2422,30 @@ function void fn064daa()
 function void fn0768d2()
 {
 	base.fn0768d2()
-	objA0.update_address = 0x0768fe
-	u16[0xffffeec6] = 0x55
-	player1.control_override = 0xff
+	if (global.xtrachar == 3)
+	{
+		objA0.update_address = 0x0768fe
+		u16[0xffffeec6] = 0x55
+		player1.control_override = 0xff
+	}
+}
+
+// Fixes glitch in the MGZ act 2 boss fight where Amy wouldn’t stop bouncing
+//# address-hook(0x05180a) end(0x05183c)
+function void fn05180a()
+{
+	base.fn05180a()
+	if (global.xtrachar == 3)
+		AmyForceStopBouncing()
+}
+
+function void AmyForceStopBouncing()
+{
+	A2 = 0xffffb000
+	if (u8[A2 + 0x2f] != 0)
+	{
+		u8[A2 + 0x2f] = 0
+		u8[A2 + 0x20] = char.state.ROLLING
+		u8[A2 + 0x40] = 0
+	}
 }

@@ -859,24 +859,64 @@ function void SetupCharacterAtStartPosition()
 function void fn01c46e()
 {
 	// Makes sure the flowers in the DA Garden intro aren't numbers
-	if (global.xtrachar == 3 && isDAGarden() && !System.getGlobalVariableValueByName("original_mode"))
+	if (global.xtrachar == 3)
 	{
-		move_area.left = 0x0200	// normally 0x1680. Going further left loads some art from the intro.
-		move_area.bottom.target = (objA0.position.x.u16 < 0x04e0) ? 0x0190 : 0x02a0
-		if (camera.position.x.u16 >= 0x1080)
-			move_area.bottom.target = 0x01a0
-		move_area.bottom.current = move_area.bottom.target
-		
-		// #if STANDALONE
-		// 	// This serves as a small delay before Tails actually spawns
-		// 	tails.respawn_counter = 60
-		// #endif
-		// tails.ai_routine = 0x02
+		if (isDAGarden() && !System.getGlobalVariableValueByName("original_mode"))
+		{
+			move_area.left = 0x0200	// normally 0x1680. Going further left loads some art from the intro.
+			move_area.bottom.target = (objA0.position.x.u16 < 0x04e0) ? 0x0190 : 0x02a0
+			if (camera.position.x.u16 >= 0x1080)
+				move_area.bottom.target = 0x01a0
+			move_area.bottom.current = move_area.bottom.target
 
-		camera.update_routine += 2
-		return
+			camera.update_routine += 2
+			return
+		}
+		else if (Mods.isModActive("Origins AIZ Intros"))
+		{
+			// Here so that the graphics in Amy's intro don't turn into numbers
+			Amy.BaseGameIntroCode()
+			return
+		}
 	}
 	base.fn01c46e()
+}
+
+function void Amy.BaseGameIntroCode()
+{
+	u8[0xfffff72e] = 1
+	if (camera.position.x.u16 >= 0x1000)
+	{
+		u8[0xfffff72e] = 0
+		move_area.left = camera.position.x.u16
+		if (camera.position.x.u16 >= 0x1308 - getScreenExtend())	// Not exact, but works for 416px
+		{
+			if (checkpoint.number == 0 && isMainCharacter(CHARACTER_SONIC))
+			{
+				requestLoadingPatterns(0x0b)		// AIZ1 object sprites
+			}
+
+			Level.loadPaletteData(0x2a)		// AIZ 1 level palette
+
+			if (isMainCharacter(CHARACTER_KNUCKLES))
+			{
+				A1 = 0xfffffc70
+				A2 = 0x04fae4
+				copyMemory((A1+=4)-4, (A2+=4)-4, 8)
+			}
+
+			// Make Tails fly in
+			{
+			#if STANDALONE
+				// This serves as a small delay before Tails actually spawns
+				tails.respawn_counter = 60
+			#endif
+				tails.ai_routine = 0x02
+			}
+
+			camera.update_routine += 2
+		}
+	}
 }
 
 function bool DAGardenTimeAttackForAmy()

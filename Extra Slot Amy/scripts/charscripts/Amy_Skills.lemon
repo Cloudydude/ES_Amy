@@ -172,7 +172,6 @@ function void Character.LandingOnGroundResetState()
 	if (!char.double_jump_state && super.active.tails == 0xff)
 		HyperAmyDontFlash = false
 
-
 	// Check for hammer bounce
 	if (char.double_jump_state == 1) && (char.state != char.state.GOT_HURT) && (char.state != char.state.GOT_HURT_PANIC)
 	{
@@ -185,7 +184,7 @@ function void Character.LandingOnGroundResetState()
         if (super.active.tails)
 		{
 			// forceX = (char.flags & char.flag.UNDERWATER) ? 0x680 : 0xb00 //
-			forceY = (char.flags & char.flag.UNDERWATER) ? 0x580 : 0x900
+			forceY = (char.flags & char.flag.UNDERWATER) ? 0x480 : 0x900
 		}
         else
 		{
@@ -204,6 +203,11 @@ function void Character.LandingOnGroundResetState()
         char.velocity.x = (s32(lookupCos(reflectedAngle)) * forceX) >> 8
         char.velocity.y = (s32(lookupSin(reflectedAngle)) * forceY) >> 8
 
+		/* Here so that Amy doesn't rocket off platforms
+		when hammer bouncing on them from underneath */
+		if (char.velocity.y >= -282)
+			char.velocity.y = (char.flags & char.flag.UNDERWATER) ? -500 : -1000
+	
 		if (competition_mode.active)
 			char.velocity.y -= 0x5A
 

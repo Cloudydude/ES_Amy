@@ -1,3 +1,11 @@
-//This is an example of a multi-char mod
-//I put all the stuff into one folder for some reason
+
+#if EXTRA_CHARACTERS_ACTIVE
+
+#if EXTRA_CHARACTERS_UNLIMITED
+
+// Character scripts
 include charscripts/?
+
+#endif
+
+#endif

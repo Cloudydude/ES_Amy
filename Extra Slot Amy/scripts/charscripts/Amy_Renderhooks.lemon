@@ -113,7 +113,7 @@ function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
 			{
 				if ((objA0.mapping_offset == 0x146620 || objA0.update_address == 0x04e000))
 				{
-					u8 atex = getatex(0x03)
+					u8 atex = 0x40
 					u8 animation = (objA0.animation.sprite == 0xb0) ? 0xa5 : 0xa6
 					key = stringformat("character_amy_0x%02x", animation)
 					Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue)

@@ -1076,6 +1076,7 @@ function void ExtraChar.onCollisionWithDynamicObject_char3()
 
 function bool AmyBreakObjects()
 {
+	AmyDustControl = 0 // enable the dust
 	// Big Ice spikes
 	if (objA1.update_address == 0x085140 && objA1.subtype2c == 0)
 	{
@@ -1613,7 +1614,7 @@ function void Character.BaseUpdate.Amy()
 	A6 = 0xffffcc9e		// Base address of dust cloud object for Tails
 
 	// Check for debug mode
-	if (debug_mode.state == 0 || A0 != 0xffffb000)	// Maybe a check if it's second player Tails?
+	if (debug_mode.state == 0 || A0 != 0xffffb000)	// Check if it's the second player
 	{
 		// Targets:
 		//  - 0x0136ca	-> char.base_state = 0x00	-> Character.Initialization.Tails()		-> Initialization
@@ -1797,7 +1798,7 @@ function void updateAmyAnimation_shared()
 
 function void updateSonicAnimationRunning()
 {
-	if (global.xtrachar != 3)
+	if (global.xtrachar != 3 || char.character != CHARACTER_TAILS)
 	{
 		base.updateSonicAnimationRunning()
 		return

@@ -44,7 +44,8 @@ function void Amybreaksout()
 		if ((level.framecounter.low & 0x09) == 0)
 		{
 			HammerSnds2()
-			ExtraChar.amySpawnHammerSwing()
+			if (Amy_HammerTrail)
+				ExtraChar.amySpawnHammerSwing()
 		}
 	}
 	else if (D1.u16 <= 15)

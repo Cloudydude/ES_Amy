@@ -159,9 +159,7 @@ function void Character.LandingOnGroundResetState()
 	if (abs(char.double_jump_state) == 1)
 		System.setGlobalVariableValueByName("powerspringtimer_p1", 3)
 
-	char.flags &= ~char.flag.IN_AIR
-	char.flags &= ~char.flag.PUSHING
-	char.flags &= ~char.flag.CONTROL_LOCK
+	char.flags &= ~(char.flag.IN_AIR | char.flag.PUSHING | char.flag.CONTROL_LOCK)
 	char.jumping = 0
 	score.bonus_counter = 0		// No more increasing bonusses after hitting the ground
 	char.rotation.x = 0
@@ -232,8 +230,8 @@ function void Character.LandingOnGroundResetState()
 		#if GAMEAPP >= 0x22121500 // Latest update
 			Input.setControllerRumble(-1, 0.5f, 69.0f, 300)
 		#endif
-			camera.hyper_knux_shake = 0x0114
-
+			if !Mods.isModActive("CREATIVE FREEDOM")
+				camera.hyper_knux_shake = 0x0114
 			AmyLandingSnds()
 		}
 
@@ -528,6 +526,8 @@ function void fn025d9c()
 					u16[A0 + 0x30] = 0x3c
 					u8[A0 + 0x32] = 1
 					D0.u8 = (u8[A1 + 0x2a] + objA0.flags2a) & 0x01
+					if (u8[A5 + 0x2c] == 1) // Origins Parity Galore
+						playSound(0x8e) // Plays a new sound
 					if (D0.u8 == 0)
 					{
 						u8[A0 + 0x32] = 0xff
@@ -544,6 +544,8 @@ function void fn025d9c()
 					u16[A0 + 0x30] = 0x3c
 					u8[A0 + 0x32] = 1
 					D0.u8 = (u8[A1 + 0x2a] + objA0.flags2a) & 0x01
+					if (u8[A6 + 0x2c] == 1) // Origins Parity Galore
+                        playSound(0x8e) // Plays a new sound
 					if (D0.u8 == 0)
 					{
 						u8[A0 + 0x32] = 0xff

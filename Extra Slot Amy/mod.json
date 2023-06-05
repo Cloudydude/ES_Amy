@@ -3,9 +3,10 @@
 	{
 		"Name": "Extra Slot Amy",
 		"Author": "MiaCDi, BLU=, iCloudius & Dynamic Lemons",
-		"Description": "Play as Amy Rose!",
-		"ModVersion": "1.1",
-		"GameVersion": "20.07.24.0"
+		"UniqueID": "extra-slot-project-amy",
+		"Description": "Play as Amy Rose in Sonic 3 A.I.R without taking up another character's slot. She can use her hammer to bounce around and reach new heights.",
+		"ModVersion": "1.15",
+		"GameVersion": "v22.05.15.0"
 	},
 	"Settings":
 	{

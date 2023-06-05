@@ -339,3 +339,89 @@ function void fn08648c()
 	if (global.xtrachar == 3)
 		super.active.tails = (global.super_emeralds == 7) ? 0xff : 0x01
 }
+
+function bool Character.performSuperTransformation()
+{
+	if (global.xtrachar != 3)
+		return base.Character.performSuperTransformation()
+
+	bool DidSheTransform = base.Character.performSuperTransformation()
+	if (DidSheTransform)
+	{
+		if (super.active.tails == 1)
+			u32[0xffffcbc0] = 0x019156		// Super Sonic star trail for Amy
+	}
+	return DidSheTransform
+}
+
+// Give Super Amy super stars
+//# address-hook(0x0191a4) end(0x019230)
+function void fn0191a4()
+{
+
+	if (!isMainCharacter(CHARACTER_TAILS) || global.xtrachar != 3)
+	{
+		base.fn0191a4()
+		return
+	}
+
+	if (!super.active.tails || super.active.tails == 0xff)
+	{
+		UnloadObject()
+		return
+	}
+
+#if STANDALONE
+	// Is Amy charging a Super Peel-Out right now?
+	if (u8[0xffffb000 + 0x3d] == 0x80)
+	{
+		objA0.position.x.u16 += (s16[0xffffb000 + 0x1c] >> 10) * ((u8[0xffffb000 + 0x2a] & char.flag.FACING_LEFT) ? 1 : -1)
+	}
+#endif
+
+	if (objA0.state != 0)
+	{
+		SuperSonicStars.CreateSparks()
+	}
+
+	if (u8[A0 + 0x34] != 0)
+	{
+		--objA0.animation.timer
+		if (s8(objA0.animation.timer) < 0)
+		{
+			objA0.animation.timer = 1
+			++objA0.animation.sprite
+			if (objA0.animation.sprite >= 6)
+			{
+				objA0.animation.sprite = 0
+				u8[A0 + 0x34] = 0
+				u8[A0 + 0x35] = 1
+				return
+			}
+		}
+
+		if (u8[A0 + 0x35] == 0)
+		{
+			objA0.position.x.u16 = u16[0xffffb000 + 0x10]
+			objA0.position.y.u16 = u16[0xffffb000 + 0x14]
+		}
+		DrawObject()
+	}
+	else
+	{
+		if (u8[0xffffb000 + 0x2e] == 0 && abs(s16[0xffffb000 + 0x1c]) >= 0x0800)
+		{
+			objA0.animation.sprite = 0
+			u8[A0 + 0x34] = 0x01
+
+			objA0.position.x.u16 = u16[0xffffb000 + 0x10]
+			objA0.position.y.u16 = u16[0xffffb000 + 0x14]
+			DrawObject()
+		}
+		else
+		{
+			u8[A0 + 0x34] = 0
+			u8[A0 + 0x35] = 0
+		}
+	}
+}

@@ -124,13 +124,7 @@ function void AmyGoldpalette()
 		AmyColor2 = 0x01CE
 		AmyColor3 = 0x00BE
 	}
-	else if (AmyPalette == 5) // Undertale: Bits & Pieces
-	{
-		AmyColor1 = 0x05CF
-		AmyColor2 = 0x04BE
-		AmyColor3 = 0x058E
-	}
-	else if (AmyPalette == 7) // Sonic Drift 2
+	else if (AmyPalette == 6) // Sonic Drift 2
 	{
 		AmyColor1 = 0x0AFF
 		AmyColor2 = 0x05FF
